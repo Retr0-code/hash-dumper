@@ -15,12 +15,39 @@
 
 #define DEFAULT_ENDIANNESS (LITTLE_ENDIANNESS)
 
-#define COMPRESSED_NAME_REG_FLAG	0b100000
-#define NO_DELETE_REG_FLAG			0b001000
-#define HIVE_ENTRY_ROOT_REG_FLAG	0b000100
-#define HIVE_EXIT_REG_FLAG			0b000010
+#define COMPRESSED_NAME_REG_FLAG	(uint16_t)0b100000
+#define NO_DELETE_REG_FLAG			(uint16_t)0b001000
+#define HIVE_ENTRY_ROOT_REG_FLAG	(uint16_t)0b000100
+#define HIVE_EXIT_REG_FLAG			(uint16_t)0b000010
+
+#define HIVE_SIGN	(uint32_t)0x72656766
+#define NK_SIGN		(uint16_t)0x6E6B
+#define VK_SIGN		(uint16_t)0x766B
+#define SK_SIGN		(uint16_t)0x736B
 
 // All in LE
+
+typedef struct hive_header_t
+{
+	uint32_t signature;			// Signature 0x72656766 == "regf"
+	uint64_t padding1;			// Unknown random padding
+	uint64_t last_write_time;	// DOS format
+	uint32_t major_ver;
+	uint32_t minor_ver;
+	uint64_t padding2;			// Unknown random padding
+	uint32_t root_offset;		// Specifies an relative root's offset of containers
+	uint32_t size;				// Amount of hbins in hive
+	const wchar_t* name;		// Hive name
+} hive_header_t;
+
+
+typedef struct abstract_key_t
+{
+	int32_t size;				// Size of hbin
+	uint16_t sign;				// Signature of key
+	const char* data;			// Data of this size
+} abstract_key_t;
+
 // Have to deal with padding in the end of a record
 // ! TODO(Determine what is these paddings are) !
 typedef struct named_key_t
@@ -42,8 +69,29 @@ typedef struct named_key_t
 	uint64_t giant_padding[2];	// Unknown random padding
 	uint16_t class_length;		// Length of node class name
 	uint16_t name_length;		// Length of node name
-	const char* name;
-};
+	const char* name;			// Name of a key
+} named_key_t;
+
+typedef struct value_key_t
+{
+	int32_t size;				// Size of hbin
+	uint16_t sign;				// Signature 0x766B == "vk"
+} value_key_t;
+
+typedef struct secure_key_t
+{
+	int32_t size;				// Size of hbin
+	uint16_t sign;				// Signature 0x736B == "sk"
+} secure_key_t;
+
+// Properly converts pointer from base struct to named key
+named_key_t* convert_to_nk(abstract_key_t* reg_key);
+
+// Properly converts pointer from base struct to value key
+value_key_t* convert_to_vk(abstract_key_t* reg_key);
+
+// Properly converts pointer from base struct to secure key
+secure_key_t* convert_to_sk(abstract_key_t* reg_key);
 
 
 #endif
