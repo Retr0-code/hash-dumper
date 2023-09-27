@@ -23,6 +23,8 @@ int main(int argc, char const** argv)
 	abstract_key_t* some_key = malloc(sizeof(abstract_key_t));
 	read_key(0x1000, hive_header_ptr->root_offset, hive_handle, some_key);
 
+	convert_to_nk(some_key);
+
 	fclose(hive_handle);
 	free(hive_header_ptr);
 	free(some_key);
