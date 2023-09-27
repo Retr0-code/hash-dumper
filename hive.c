@@ -18,18 +18,8 @@ int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr)
 		return -3;
 
 	// Read signature struct
-	/*if (fread(hive_header_ptr, sizeof(hive_header_t) - 510, 1, hive_ptr) != 1)
-		return -4;*/
-
-
-	fread(&hive_header_ptr->signature, sizeof(hive_header_ptr->signature), 1, hive_ptr);
-	fread(&hive_header_ptr->padding1, sizeof(hive_header_ptr->padding1), 1, hive_ptr);
-	fread(&hive_header_ptr->last_write_time, sizeof(hive_header_ptr->last_write_time), 1, hive_ptr);
-	fread(&hive_header_ptr->major_ver, sizeof(hive_header_ptr->major_ver), 1, hive_ptr);
-	fread(&hive_header_ptr->minor_ver, sizeof(hive_header_ptr->minor_ver), 1, hive_ptr);
-	fread(&hive_header_ptr->padding2, sizeof(hive_header_ptr->padding2), 1, hive_ptr);
-	fread(&hive_header_ptr->root_offset, sizeof(hive_header_ptr->root_offset), 1, hive_ptr);
-	fread(&hive_header_ptr->size, sizeof(hive_header_ptr->size), 1, hive_ptr);
+	if (fread(hive_header_ptr, sizeof(hive_header_t) - sizeof(wchar_t) * 255, 1, hive_ptr) != 1)
+		return -4;
 
 #if (ENDIANNESS == LITTLE_ENDIAN)
 	hive_header_ptr->signature = _byteswap_ulong(hive_header_ptr->signature);
@@ -87,18 +77,22 @@ int read_key(uint64_t offset, uint32_t root_offset, FILE* hive_ptr, abstract_key
 		return -6;
 
 	// Read sign and size
-	fread(&key->size, sizeof(key->size), 1, hive_ptr);
-	fread(&key->signature, sizeof(key->signature), 1, hive_ptr);
-
-	key->data = malloc(0 - key->size);
-	if (key->data == NULL)
+	if (fread(key, sizeof(abstract_key_t) - sizeof(key->data), 1, hive_ptr) != 1)
 		return -7;
 
-	fread(key->data, sizeof(key->size), 1, hive_ptr);
-	
 #if (ENDIANNESS == LITTLE_ENDIAN)
 	key->signature = _byteswap_ushort(key->signature);
 #endif
+
+	if (key->size < 0)
+		key->size = 0 - key->size;
+
+	key->data = malloc(key->size);
+	if (key->data == NULL)
+		return -8;
+
+	if (fread(key->data, key->size, 1, hive_ptr) != 1)
+		return -9;
 
 	return 0;
 }
