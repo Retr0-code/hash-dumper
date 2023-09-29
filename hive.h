@@ -1,3 +1,21 @@
+/*
+	Copyright (C) 2023 Nikita Retr0-code Korneev
+
+    hash_dumper is free software: you can redistribute, modify it
+    under the terms of the GNU Affero General Public License version 3.
+
+    You should have received a copy of GNU Affero General Public License
+    version 3 along with hash_dumper.
+    If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
+
+
+----
+
+	References used:
+	 - Registry hive basics and structure / https://binaryforay.blogspot.com/2015/01/registry-hive-basics.html?m=1
+	 - Windows registry foremat specs / https://github.com/msuhanov/regf/blob/master/Windows%20registry%20file%20format%20specification.md
+*/
+
 #ifndef HIVE_H
 #define HIVE_H
 
@@ -14,19 +32,35 @@
 #define BIG_ENDIAN 2
 
 /*
-* By default endianness type is little endian, but you can change it to BIG_ENDIAN if this is your case
+By default endianness type is little endian, but you can change it to BIG_ENDIAN if this is your case
 */
 #define ENDIANNESS LITTLE_ENDIAN
 
 
 /*
-* COMPRESSED_NAME_REG_FLAG - uses ASCII instead of 16bit
-* HIVE_ENTRY_ROOT_REG_FLAG - determines the root node of the Registry hive
+NKF_KEY_VOLATILE		- is volatile (not used, a key node on a disk isn't expected to have this flag set)
+NKF_HIVE_EXIT			- is the mount point of another hive (a key node on a disk isn't expected to have this flag set)
+NKF_HIVE_ENTRY_ROOT	- determines the root node of the Registry hive
+NKF_NO_DELETE			- this key can't be deleted
+NKF_KEY_SYM_LINK		- this key is a symlink (in UTF-16LE)
+NKF_COMPRESSED_NAME	- uses ASCII instead of 16bit
+NKF_KEY_PREDEF_HANDLE	- is a predefined handle (a handle is stored in the Number of key values field)
 */
-#define COMPRESSED_NAME_REG_FLAG	(uint16_t)0b100000
-#define NO_DELETE_REG_FLAG			(uint16_t)0b001000
-#define HIVE_ENTRY_ROOT_REG_FLAG	(uint16_t)0b000100
-#define HIVE_EXIT_REG_FLAG			(uint16_t)0b000010
+#define NKF_KEY_VOLATILE		(uint16_t)0b00000001
+#define NKF_HIVE_EXIT			(uint16_t)0b00000010
+#define NKF_HIVE_ENTRY_ROOT	(uint16_t)0b00000100
+#define NKF_NO_DELETE			(uint16_t)0b00001000
+#define NKF_KEY_SYM_LINK		(uint16_t)0b00010000
+#define NKF_COMPRESSED_NAME	(uint16_t)0b00100000
+#define NKF_KEY_PREDEF_HANDLE	(uint16_t)0b01000000
+
+/*
+VKF_VALUE_COMP_NAME		- Value name is an ASCII string, possibly an extended ASCII string (otherwise it is a UTF-16LE string)
+VKF_IS_TOMBSTONE		- a tombstone value has the Data type field set to REG_NONE, the Data size field set to 0, and the Data offset field set to (uint32_t)-1
+*/
+#define VKF_VALUE_COMP_NAME		(uint16_t)0b00000001
+#define VKF_IS_TOMBSTONE		(uint16_t)0b00000010
+
 
 #if (ENDIANNESS == LITTLE_ENDIAN)
 
@@ -67,6 +101,7 @@ typedef PACK(struct hive_header_t
 	wchar_t name[255];			// Hive name
 } hive_header_t);
 
+
 // Base key structure that could be cast down to nk, vk, sk via functions
 typedef PACK(struct abstract_key_t
 {
@@ -75,13 +110,15 @@ typedef PACK(struct abstract_key_t
 	char* data;					// Data of this size
 } abstract_key_t);
 
-// Have to deal with padding in the end of a record
-// ! TODO(Determine what is these paddings are) !
+
+/*
+A NK (named key) record contains the information necessary to define a key (and subkeys as well).
+*/
 typedef PACK(struct named_key_t
 {
 	int32_t size;				// Size of hbin, which is negative if container in use
 	uint16_t signature;			// Signature 0x6E6B == "nk"
-	uint16_t flags;				// Binary flags
+	uint16_t flags;				// Binary nk flags
 	uint64_t last_write_time;	// DOS format
 	uint32_t padding1;			// 0 padding
 	uint32_t parent_offset;		// Offset to parent cell if HIVE_ENTRY_ROOT_REG_FLAG is set it points to 0xFFFFFFFF
@@ -99,27 +136,70 @@ typedef PACK(struct named_key_t
 	char* name;					// Name of a key
 } named_key_t);
 
+
+/*
+When the most significant bit is 1, data(4 bytes or less) is stored in
+the Data offset field directly(when data contains less than 4 bytes,
+it is being stored as is in the beginning of the Data offset field).
+The most significant bit(when set to 1) should be ignored when calculating the data size.
+*/
 typedef PACK(struct value_key_t
 {
 	int32_t size;				// Size of key, which is negative if container in use
 	uint16_t sign;				// Signature 0x766B == "vk"
+	uint16_t name_length;		// Value name length if 0 name not set (Default)
+	uint32_t data_size;			// Amount of bytes of stored data (if higher bit is set then data is stored in data_offset)
+	uint32_t data_offset_val;	// Stores offset to data or the data if size less then or equal to 4
+	uint32_t data_type;			// Datatypes defined in Winnt.h (https://learn.microsoft.com/en-us/windows/win32/shell/hkey-type)
+	uint16_t flags;				// Binary vk flags
+	uint16_t padding;			// Random padding
+	char* name;					// Value's name (optional if the length is 0)
 } value_key_t);
 
+
+/*
+A SK (security key) record contains the information
+necessary to define access controls for the Registry.
+An example of an SK record as it exists on disk is shown below.
+*/
 typedef PACK(struct secure_key_t
 {
 	int32_t size;				// Size of key, which is negative if container in use
 	uint16_t signature;			// Signature 0x736B == "sk"
+	uint16_t padding;			// 0 padding
+	uint32_t forward_link;		// the offset to the next SK record in the hive
+	uint32_t back_link;			// the offset to the previous SK record in the hive
+	uint32_t references;		// Amount of references to this node
+	uint32_t descriptor_size;	// Size of descriptor in bytes
+	char* descriptor;			// Descriptor data
 } secure_key_t);
 
+
+/*
+Describes an element stored in fast leaf
+*/
+typedef PACK(struct lf_element_t
+{
+	uint32_t node_offset;		// In bytes, relative from the start of the hive bins data
+	uint32_t name_hint;			// The first 4 ASCII characters of a key name string (used to speed up lookups)
+} lf_element_t);
+
+/*
+A LF (fast leaf) record contains subkeys list with name hints and offsets
+*/
 typedef PACK(struct fast_leaf_t
 {
 	int32_t size;				// Size of key, which is negative if container in use
 	uint16_t signature;			// Signature 0x6C66 == "lf"
+	uint16_t elements_amount;	// Number of stored elements
+	lf_element_t* elements;		// Array of elements
 } fast_leaf_t);
 
 
+// Reads hive header structure
 int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr);
 
+// Reads key to base strcuture that could be upcasted
 int read_key(const uint64_t offset, const uint32_t root_offset, FILE* hive_ptr, abstract_key_t* key);
 
 // Properly converts pointer from base struct to named key (copy function)
