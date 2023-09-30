@@ -40,8 +40,9 @@ int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr)
 	if (fread(hive_header_ptr, sizeof(hive_header_t) - sizeof(wchar_t) * 255, 1, hive_ptr) != 1)
 		return -4;
 
-#if (ENDIANNESS == LITTLE_ENDIAN)
-	hive_header_ptr->last_write_time = _byteswap_uint64(hive_header_ptr->last_write_time);
+#if (HV_ENDIANNESS == HV_LITTLE_ENDIAN)
+//	hive_header_ptr->last_write_time = _byteswap_uint64(hive_header_ptr->last_write_time);
+	hive_header_ptr->last_write_time = BYTE_SWAP64(hive_header_ptr->last_write_time);
 #endif
 
 	// Check signature
@@ -122,7 +123,7 @@ named_key_t* convert_to_nk(abstract_key_t* reg_key)
 
 	// Copies base values to new struct
 	memcpy(nk_ptr, reg_key, sizeof(abstract_key_t) - sizeof(char*));
-	
+
 	// Validates a signature
 	if (nk_ptr->signature != NK_SIGN)
 	{
@@ -145,8 +146,9 @@ named_key_t* convert_to_nk(abstract_key_t* reg_key)
 
 	nk_ptr->name[nk_ptr->name_length] = '\0';
 
-#if (ENDIANNESS == LITTLE_ENDIAN)
-	nk_ptr->flags = _byteswap_ushort(nk_ptr->flags);
+#if (HV_ENDIANNESS == HV_LITTLE_ENDIAN)
+//	nk_ptr->flags = _byteswap_ushort(nk_ptr->flags);
+	nk_ptr->flags = BYTE_SWAP16(nk_ptr->flags);
 #endif
 
 	return nk_ptr;

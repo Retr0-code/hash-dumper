@@ -20,21 +20,47 @@
 #define HIVE_H
 
 #include <stdio.h>
+#include <errno.h>
+#include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+
+#include "functional.h"
+
+#if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 
-#ifdef _MSC_VER
-#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
+#elif defined(__linux__) || defined(__unix__)
+
+#include <byteswap.h>
+
+#define _fseeki64(stream, offset, pos) fseeko(stream, offset, pos)
 #endif
 
-#define LITTLE_ENDIAN 1
-#define BIG_ENDIAN 2
+#define HV_LITTLE_ENDIAN 1
+#define HV_BIG_ENDIAN 2
 
 /*
 By default endianness type is little endian, but you can change it to BIG_ENDIAN if this is your case
 */
-#define ENDIANNESS LITTLE_ENDIAN
+#define HV_ENDIANNESS HV_LITTLE_ENDIAN
+
+
+#ifdef _MSC_VER
+// #define PACK( __decl__ ) __pragma( pack(push, 1) ) __decl__ __pragma( pack(pop))
+#define PACKED_STRUCT(struct_name) __pragma( pack(push, 1) ) struct struct_name __pragma( pack(pop))
+
+#define BYTE_SWAP16(x) _byteswap_ushort(x)
+#define BYTE_SWAP32(x) _byteswap_ulong(x)
+#define BYTE_SWAP64(x) _byteswap_uint64(x)
+
+#elif defined(__GNUC__)
+// #define PACK( __decl__ ) __decl__ __attribute__((__packed__))
+#define PACKED_STRUCT(struct_name) struct __attribute__((__packed__)) struct_name
+#define BYTE_SWAP16(x) bswap_16(x)
+#define BYTE_SWAP32(x) bswap_32(x)
+#define BYTE_SWAP64(x) bswap_64(x)
+#endif
 
 
 /*
@@ -62,16 +88,16 @@ VKF_IS_TOMBSTONE		- a tombstone value has the Data type field set to REG_NONE, t
 #define VKF_IS_TOMBSTONE		(uint16_t)0b00000010
 
 
-#if (ENDIANNESS == LITTLE_ENDIAN)
+#if (HV_ENDIANNESS == HV_LITTLE_ENDIAN)
 
-#define HIVE_SIGN	_byteswap_ulong((uint32_t)0x72656766)
-#define HBIN_SIGN	_byteswap_ulong((uint32_t)0x6862696E)
-#define NK_SIGN		_byteswap_ushort((uint16_t)0x6E6B)
-#define VK_SIGN		_byteswap_ushort((uint16_t)0x766B)
-#define SK_SIGN		_byteswap_ushort((uint16_t)0x736B)
-#define LF_SIGN		_byteswap_ushort((uint16_t)0x6C66)
+#define HIVE_SIGN	BYTE_SWAP32((uint32_t)0x72656766)
+#define HBIN_SIGN	BYTE_SWAP32((uint32_t)0x6862696E)
+#define NK_SIGN		BYTE_SWAP16((uint16_t)0x6E6B)
+#define VK_SIGN		BYTE_SWAP16((uint16_t)0x766B)
+#define SK_SIGN		BYTE_SWAP16((uint16_t)0x736B)
+#define LF_SIGN		BYTE_SWAP16((uint16_t)0x6C66)
 
-#elif (ENDIANNESS == BIG_ENDIAN)
+#elif (HV_ENDIANNESS == HV_BIG_ENDIAN)
 
 #define HIVE_SIGN	(uint32_t)0x72656766
 #define HBIN_SIGN	(uint32_t)0x6862696E
@@ -88,7 +114,22 @@ VKF_IS_TOMBSTONE		- a tombstone value has the Data type field set to REG_NONE, t
 
 // By default everything in LE
 
-typedef PACK(struct hive_header_t
+// typedef PACK(struct hive_header_t
+// {
+// 	uint32_t signature;			// Signature 0x72656766 == "regf
+// 	uint64_t padding1;			// Random padding
+// 	uint64_t last_write_time;	// DOS format
+// 	uint32_t major_ver;			// Regisry major version
+// 	uint32_t minor_ver;			// Regisry minor version
+// 	uint64_t padding2;			// Random padding
+// 	uint32_t root_offset;		// Specifies an relative root's offset of containers
+// 	uint32_t size;				// Amount of hbins in hive
+// 	wchar_t name[255];			// Hive name
+// } hive_header_t);
+
+
+
+typedef PACKED_STRUCT()
 {
 	uint32_t signature;			// Signature 0x72656766 == "regf
 	uint64_t padding1;			// Random padding
@@ -99,22 +140,54 @@ typedef PACK(struct hive_header_t
 	uint32_t root_offset;		// Specifies an relative root's offset of containers
 	uint32_t size;				// Amount of hbins in hive
 	wchar_t name[255];			// Hive name
-} hive_header_t);
+} hive_header_t;
+
 
 
 // Base key structure that could be cast down to nk, vk, sk via functions
-typedef PACK(struct abstract_key_t
+// typedef PACK(struct abstract_key_t
+// {
+// 	int32_t size;				// Size of hbin, which is negative if container in use
+// 	uint16_t signature;			// Signature of key
+// 	char* data;					// Data of this size
+// } abstract_key_t);
+
+
+typedef PACKED_STRUCT()
 {
 	int32_t size;				// Size of hbin, which is negative if container in use
 	uint16_t signature;			// Signature of key
 	char* data;					// Data of this size
-} abstract_key_t);
+} abstract_key_t;
 
 
 /*
 A NK (named key) record contains the information necessary to define a key (and subkeys as well).
 */
-typedef PACK(struct named_key_t
+// typedef PACK(struct named_key_t
+// {
+// 	int32_t size;				// Size of hbin, which is negative if container in use
+// 	uint16_t signature;			// Signature 0x6E6B == "nk"
+// 	uint16_t flags;				// Binary nk flags
+// 	uint64_t last_write_time;	// DOS format
+// 	uint32_t padding1;			// 0 padding
+// 	uint32_t parent_offset;		// Offset to parent cell if HIVE_ENTRY_ROOT_REG_FLAG is set it points to 0xFFFFFFFF
+// 	uint32_t subkey_amount;		// Stores amount of subkeys only one step deepper
+// 	uint32_t padding2;			// 0 padding
+// 	uint32_t subkey_offset;		// Offset to nearest subkey
+// 	uint32_t padding3;			// -1 padding
+// 	uint32_t values_amount;		// Values in current subkey
+// 	uint32_t value_offset;		// Offset to nearest value key
+// 	uint32_t security_offset;	// Offset to security key record
+// 	uint32_t class_name_offset;	// Offset of nodes class name
+// 	uint64_t giant_padding[2];	// Unknown random padding
+// 	uint32_t class_length;		// Length of node class name
+// 	uint32_t name_length;		// Length of node name
+// 	char* name;					// Name of a key
+// } named_key_t);
+
+
+typedef PACKED_STRUCT()
 {
 	int32_t size;				// Size of hbin, which is negative if container in use
 	uint16_t signature;			// Signature 0x6E6B == "nk"
@@ -134,7 +207,7 @@ typedef PACK(struct named_key_t
 	uint32_t class_length;		// Length of node class name
 	uint32_t name_length;		// Length of node name
 	char* name;					// Name of a key
-} named_key_t);
+} named_key_t;
 
 
 /*
@@ -143,7 +216,21 @@ the Data offset field directly(when data contains less than 4 bytes,
 it is being stored as is in the beginning of the Data offset field).
 The most significant bit(when set to 1) should be ignored when calculating the data size.
 */
-typedef PACK(struct value_key_t
+// typedef PACK(struct value_key_t
+// {
+// 	int32_t size;				// Size of key, which is negative if container in use
+// 	uint16_t sign;				// Signature 0x766B == "vk"
+// 	uint16_t name_length;		// Value name length if 0 name not set (Default)
+// 	uint32_t data_size;			// Amount of bytes of stored data (if higher bit is set then data is stored in data_offset)
+// 	uint32_t data_offset_val;	// Stores offset to data or the data if size less then or equal to 4
+// 	uint32_t data_type;			// Datatypes defined in Winnt.h (https://learn.microsoft.com/en-us/windows/win32/shell/hkey-type)
+// 	uint16_t flags;				// Binary vk flags
+// 	uint16_t padding;			// Random padding
+// 	char* name;					// Value's name (optional if the length is 0)
+// } value_key_t);
+
+
+typedef PACKED_STRUCT()
 {
 	int32_t size;				// Size of key, which is negative if container in use
 	uint16_t sign;				// Signature 0x766B == "vk"
@@ -154,7 +241,7 @@ typedef PACK(struct value_key_t
 	uint16_t flags;				// Binary vk flags
 	uint16_t padding;			// Random padding
 	char* name;					// Value's name (optional if the length is 0)
-} value_key_t);
+} value_key_t;
 
 
 /*
@@ -162,7 +249,20 @@ A SK (security key) record contains the information
 necessary to define access controls for the Registry.
 An example of an SK record as it exists on disk is shown below.
 */
-typedef PACK(struct secure_key_t
+// typedef PACK(struct secure_key_t
+// {
+// 	int32_t size;				// Size of key, which is negative if container in use
+// 	uint16_t signature;			// Signature 0x736B == "sk"
+// 	uint16_t padding;			// 0 padding
+// 	uint32_t forward_link;		// the offset to the next SK record in the hive
+// 	uint32_t back_link;			// the offset to the previous SK record in the hive
+// 	uint32_t references;		// Amount of references to this node
+// 	uint32_t descriptor_size;	// Size of descriptor in bytes
+// 	char* descriptor;			// Descriptor data
+// } secure_key_t);
+
+
+typedef PACKED_STRUCT()
 {
 	int32_t size;				// Size of key, which is negative if container in use
 	uint16_t signature;			// Signature 0x736B == "sk"
@@ -172,28 +272,42 @@ typedef PACK(struct secure_key_t
 	uint32_t references;		// Amount of references to this node
 	uint32_t descriptor_size;	// Size of descriptor in bytes
 	char* descriptor;			// Descriptor data
-} secure_key_t);
-
+} secure_key_t;
 
 /*
 Describes an element stored in fast leaf
 */
-typedef PACK(struct lf_element_t
+// typedef PACK(struct lf_element_t
+// {
+// 	uint32_t node_offset;		// In bytes, relative from the start of the hive bins data
+// 	uint32_t name_hint;			// The first 4 ASCII characters of a key name string (used to speed up lookups)
+// } lf_element_t);
+
+
+typedef PACKED_STRUCT()
 {
 	uint32_t node_offset;		// In bytes, relative from the start of the hive bins data
 	uint32_t name_hint;			// The first 4 ASCII characters of a key name string (used to speed up lookups)
-} lf_element_t);
+} lf_element_t;
 
 /*
 A LF (fast leaf) record contains subkeys list with name hints and offsets
 */
-typedef PACK(struct fast_leaf_t
+// typedef PACK(struct fast_leaf_t
+// {
+// 	int32_t size;				// Size of key, which is negative if container in use
+// 	uint16_t signature;			// Signature 0x6C66 == "lf"
+// 	uint16_t elements_amount;	// Number of stored elements
+// 	lf_element_t* elements;		// Array of elements
+// } fast_leaf_t);
+
+typedef PACKED_STRUCT()
 {
 	int32_t size;				// Size of key, which is negative if container in use
 	uint16_t signature;			// Signature 0x6C66 == "lf"
 	uint16_t elements_amount;	// Number of stored elements
 	lf_element_t* elements;		// Array of elements
-} fast_leaf_t);
+} fast_leaf_t;
 
 
 // Reads hive header structure
@@ -210,6 +324,8 @@ value_key_t* convert_to_vk(abstract_key_t* reg_key);
 
 // Properly converts pointer from base struct to secure key
 secure_key_t* convert_to_sk(abstract_key_t* reg_key);
+
+// fast_leaf_t*
 
 
 #endif
