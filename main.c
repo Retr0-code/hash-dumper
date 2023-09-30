@@ -1,17 +1,13 @@
 #include "hive.h"
 #include <stdio.h>
 
-
 int main(int argc, char const** argv)
 {
-	FILE* hive_handle = NULL;
-	errno_t fopen_error = fopen_s(&hive_handle, "./TestingDumper.save", "rb");
+	FILE* hive_handle = fopen("./TestingDumper.save", "rb");
 
 	if (hive_handle == NULL)
 	{
-		char error_buffer[94];
-		strerror_s(error_buffer, 94, fopen_error);
-		printf("Error opening file: %s\n", error_buffer);
+		printf("Error opening file: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -21,9 +17,18 @@ int main(int argc, char const** argv)
 	read_hive_header(hive_handle, hive_header_ptr);
 
 	abstract_key_t* some_key = malloc(sizeof(abstract_key_t));
-	read_key(0x1000, hive_header_ptr->root_offset, hive_handle, some_key);
+	if (read_key(0x1000, hive_header_ptr->root_offset, hive_handle, some_key))
+	{
+		puts("Failed to read the key");
+		printf("%s\n", strerror(errno));
+		return -1;
+	}
 
-	convert_to_nk(some_key);
+	if (convert_to_nk(some_key) == NULL)
+	{
+		puts("Failed to convert the key");
+		return -1;
+	}
 
 	fclose(hive_handle);
 	free(hive_header_ptr);

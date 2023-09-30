@@ -119,7 +119,10 @@ named_key_t* convert_to_nk(abstract_key_t* reg_key)
 	named_key_t* nk_ptr = malloc(sizeof(named_key_t));
 
 	if (nk_ptr == NULL)
-		return -1;
+	{
+		errno = EFAULT;
+		return NULL;
+	}
 
 	// Copies base values to new struct
 	memcpy(nk_ptr, reg_key, sizeof(abstract_key_t) - sizeof(char*));
@@ -128,7 +131,7 @@ named_key_t* convert_to_nk(abstract_key_t* reg_key)
 	if (nk_ptr->signature != NK_SIGN)
 	{
 		errno = EBADF;
-		return -2;
+		return NULL;
 	}
 
 	memcpy(
@@ -140,7 +143,10 @@ named_key_t* convert_to_nk(abstract_key_t* reg_key)
 	// Allocate memory for key's name
 	nk_ptr->name = malloc(nk_ptr->name_length + 1);
 	if (nk_ptr->name == NULL)
-		return -3;
+	{
+		errno = EFAULT;
+		return NULL;
+	}
 
 	memcpy(nk_ptr->name, &reg_key->data[sizeof(named_key_t) - sizeof(char*) - 6], nk_ptr->name_length);
 
