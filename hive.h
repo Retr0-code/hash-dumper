@@ -24,6 +24,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdarg.h>
 
 #include "functional.h"
 
@@ -146,7 +147,7 @@ typedef PACK(struct named_key_t
 	uint32_t parent_offset;		// Offset to parent cell if HIVE_ENTRY_ROOT_REG_FLAG is set it points to 0xFFFFFFFF
 	uint32_t subkey_amount;		// Stores amount of subkeys only one step deepper
 	uint32_t padding2;			// 0 padding
-	uint32_t subkey_offset;		// Offset to nearest subkey
+	uint32_t subkey_offset;		// Offset to fast leaf
 	uint32_t padding3;			// -1 padding
 	uint32_t values_amount;		// Values in current subkey
 	uint32_t value_offset;		// Offset to nearest value key
@@ -168,7 +169,7 @@ The most significant bit(when set to 1) should be ignored when calculating the d
 typedef PACK(struct value_key_t
 {
 	int32_t size;				// Size of key, which is negative if container in use
-	uint16_t sign;				// Signature 0x766B == "vk"
+	uint16_t signature;			// Signature 0x766B == "vk"
 	uint16_t name_length;		// Value name length if 0 name not set (Default)
 	uint32_t data_size;			// Amount of bytes of stored data (if higher bit is set then data is stored in data_offset)
 	uint32_t data_offset_val;	// Stores offset to data or the data if size less then or equal to 4
@@ -177,6 +178,13 @@ typedef PACK(struct value_key_t
 	uint16_t padding;			// Random padding
 	char* name;					// Value's name (optional if the length is 0)
 }) value_key_t;
+
+
+typedef PACK(struct value_list_t
+{
+	int32_t size;				// Size of key, which is negative if container in use
+	uint32_t* offsets;			// Offsets to value_key_t structures
+}) value_list_t;
 
 
 /*
@@ -217,23 +225,29 @@ typedef PACK(struct fast_leaf_t
 	lf_element_t* elements;		// Array of elements
 }) fast_leaf_t;
 
+/*
+A helper structure that defines a path to embedded named key
+*/
+typedef PACK(struct reg_path_t
+{
+	uint32_t size;
+	const char** nodes;
+	uint32_t* nodes_hints;
+}) reg_path_t;
+
 
 // Reads hive header structure
 int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr);
 
-// Reads key to base strcuture that could be upcasted
-int read_key(const uint64_t offset, const uint32_t root_offset, FILE* hive_ptr, abstract_key_t* key);
+int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_ptr);
 
-// Properly converts pointer from base struct to named key (copy function)
-named_key_t* convert_to_nk(abstract_key_t* reg_key);
+reg_path_t* reg_make_path(const uint32_t depth, const char** reg_path);
 
-// Properly converts pointer from base struct to value key
-value_key_t* convert_to_vk(abstract_key_t* reg_key);
+// Properly converts pointer from base struct to value list (copy function)
+value_list_t* convert_to_vk_list(abstract_key_t* reg_key);
 
-// Properly converts pointer from base struct to secure key
-secure_key_t* convert_to_sk(abstract_key_t* reg_key);
-
-// fast_leaf_t*
+// Enumerates subkey recursivly from given base key
+int enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_ptr, FILE* hive_ptr, named_key_t* out_nk_ptr);
 
 
 #endif
