@@ -24,7 +24,7 @@ int main(int argc, char const** argv)
 		return -1;
 	}
 	
-	const char* internal_reg[1] = {"InternalDirectory"};
+	const char* internal_reg[1] = {"InternalTest"};
 	reg_path_t* reg_path_ptr = reg_make_path(1, internal_reg);
 
 	if (reg_path_ptr == NULL)

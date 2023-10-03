@@ -40,7 +40,7 @@ int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr)
 	if (fread(hive_header_ptr, sizeof(hive_header_t) - sizeof(wchar_t) * 255, 1, hive_ptr) != 1)
 		return -4;
 
-#if (HV_ENDIANNESS == HV_LITTLE_ENDIAN)
+#if (HV_ENDIANNESS == HV_BIG_ENDIAN)
 	hive_header_ptr->last_write_time = BYTE_SWAP64(hive_header_ptr->last_write_time);
 #endif
 
@@ -59,6 +59,60 @@ int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr)
 
 	return 0;
 }
+
+int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_ptr)
+{
+	// Validation of hive fd
+	if (hive_ptr == NULL)
+	{
+		errno = EINVAL;
+		return -1;
+	}
+
+	// Checking if allocated
+	if (nk_ptr == NULL)
+		return -2;
+
+	// Setting cursor to hbin offset
+	if (fseek(hive_ptr, 0x1000 + root_offset, SEEK_SET) != 0)
+		return -3;
+
+	// Reading structure
+	if (fread(nk_ptr, sizeof(named_key_t) - sizeof(nk_ptr->name), 1, hive_ptr) != 1)
+		return -4;
+
+	// Validation of a signature
+	if (nk_ptr->signature != NK_SIGN)
+	{
+		errno = EBADF;
+		return -5;
+	}
+
+	// If size less then 0 it means that node is in use, otherwise it's not
+	if (nk_ptr->size > 0)
+	{
+		errno = EBADF;
+		return -6;
+	}
+
+	// Inverse the size
+	nk_ptr->size = 0 - nk_ptr->size;
+
+#if (HV_ENDIANNESS == HV_BIG_ENDIAN)
+	nk_ptr->flags = BYTE_SWAP16(nk_ptr->flags);
+#endif
+
+	nk_ptr->name = malloc(nk_ptr->name_length + 1);
+	if (nk_ptr->name == NULL)
+		return -7;
+
+	if (fread(nk_ptr->name, nk_ptr->name_length, 1, hive_ptr) != 1)
+		return -8;
+
+	nk_ptr->name[nk_ptr->name_length] = '\0';
+	return 0;
+}
+
 
 reg_path_t* reg_make_path(const uint32_t depth, const char** reg_path)
 {
@@ -104,84 +158,6 @@ reg_path_t* reg_make_path(const uint32_t depth, const char** reg_path)
 	return reg_path_ptr;
 }
 
-int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_ptr)
-{
-	// Validation of hive fd
-	if (hive_ptr == NULL)
-	{
-		errno = EINVAL;
-		return -1;
-	}
-
-	// Checking if allocated
-	if (nk_ptr == NULL)
-		return -2;
-
-	// Setting cursor to hbin offset
-	if (fseek(hive_ptr, 0x1000 + root_offset, SEEK_SET) != 0)
-		return -3;
-
-	// Reading structure
-	if (fread(nk_ptr, sizeof(named_key_t) - sizeof(nk_ptr->name), 1, hive_ptr) != 1)
-		return -4;
-
-	// Validation of a signature
-	if (nk_ptr->signature != NK_SIGN)
-	{
-		errno = EBADF;
-		return -5;
-	}
-
-	// If size less then 0 it means that node is in use, otherwise it's not
-	if (nk_ptr->size > 0)
-	{
-		errno = EBADF;
-		return -6;
-	}
-
-	// Inverse the size
-	nk_ptr->size = 0 - nk_ptr->size;
-
-#if (HV_ENDIANNESS == HV_LITTLE_ENDIAN)
-	nk_ptr->flags = BYTE_SWAP16(nk_ptr->flags);
-#endif
-
-	nk_ptr->name = malloc(nk_ptr->name_length + 1);
-	if (nk_ptr->name == NULL)
-		return -7;
-
-	if (fread(nk_ptr->name, nk_ptr->name_length, 1, hive_ptr) != 1)
-		return -8;
-
-	nk_ptr->name[nk_ptr->name_length] = '\0';
-	return 0;
-}
-
-value_list_t* convert_to_vk_list(abstract_key_t* reg_key)
-{
-	value_list_t* vk_list_ptr = malloc(sizeof(value_list_t));
-	if (vk_list_ptr == NULL)
-	{
-		errno = EFAULT;
-		return NULL;
-	}
-
-	// Copies base values to new struct
-	vk_list_ptr->size = reg_key->size;
-
-	vk_list_ptr->offsets = malloc(vk_list_ptr->size);
-	if (vk_list_ptr == NULL)
-	{
-		free(vk_list_ptr);
-		errno = EFAULT;
-		return NULL;
-	}
-
-	//memcpy(&vk_list_ptr->offsets[1], reg_key->data, vk_list_ptr->size - sizeof(uint32_t));
-
-	return vk_list_ptr;
-}
-
 int enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_ptr, FILE* hive_ptr, named_key_t* out_nk_ptr)
 {
 	// Validation of parameters
@@ -211,9 +187,9 @@ int enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_ptr, 
 
 	// Condition to end a recursion
 	if (reg_path_ptr->size == 0)
-	{
 		return 0;
-	}
+	else
+		out_nk_ptr->name = NULL;	// Because we do not need a name, when node is not requiered
 
 	if (fseek(hive_ptr, 0x1000 + base_nk_ptr->subkey_offset, SEEK_SET) != 0)
 		return -5;
@@ -266,7 +242,20 @@ int enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_ptr, 
 		if (sub_keys.elements[lf_index].name_hint == reg_path_ptr->nodes_hints[0])
 		{
 			embedded_nk_offset = sub_keys.elements[lf_index].node_offset;
-			break;
+			
+			if (out_nk_ptr->name != NULL)
+				free(out_nk_ptr->name);
+
+			// Reading new key
+			if (read_named_key(embedded_nk_offset, hive_ptr, out_nk_ptr))
+			{
+				free(sub_keys.elements);
+				return -14;
+			}
+
+			// Checking names if hints are identical
+			if (strcmp(out_nk_ptr->name, reg_path_ptr->nodes[0]) == 0)
+				break;
 		}
 	}
 
@@ -276,13 +265,6 @@ int enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_ptr, 
 		free(sub_keys.elements);
 		errno = ENOENT;
 		return -12;
-	}
-
-	// Reading new key
-	if (read_named_key(embedded_nk_offset, hive_ptr, out_nk_ptr))
-	{
-		free(sub_keys.elements);
-		return -14;
 	}
 
 	// Delete first node of path

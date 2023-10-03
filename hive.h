@@ -125,15 +125,6 @@ typedef PACK(struct hive_header_t
 }) hive_header_t;
 
 
-// Base key structure that could be cast down to nk, vk, sk via functions
-typedef PACK(struct abstract_key_t
-{
-	int32_t size;				// Size of hbin, which is negative if container in use
-	uint16_t signature;			// Signature of key
-	char* data;					// Data of this size
-}) abstract_key_t;
-
-
 /*
 A NK (named key) record contains the information necessary to define a key (and subkeys as well).
 */
@@ -204,6 +195,7 @@ typedef PACK(struct secure_key_t
 	char* descriptor;			// Descriptor data
 }) secure_key_t;
 
+
 /*
 Describes an element stored in fast leaf
 */
@@ -225,6 +217,7 @@ typedef PACK(struct fast_leaf_t
 	lf_element_t* elements;		// Array of elements
 }) fast_leaf_t;
 
+
 /*
 A helper structure that defines a path to embedded named key
 */
@@ -239,12 +232,11 @@ typedef PACK(struct reg_path_t
 // Reads hive header structure
 int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr);
 
+// Read named key from hive
 int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_ptr);
 
+// Initializes a path to named key
 reg_path_t* reg_make_path(const uint32_t depth, const char** reg_path);
-
-// Properly converts pointer from base struct to value list (copy function)
-value_list_t* convert_to_vk_list(abstract_key_t* reg_key);
 
 // Enumerates subkey recursivly from given base key
 int enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_ptr, FILE* hive_ptr, named_key_t* out_nk_ptr);
