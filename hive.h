@@ -14,6 +14,10 @@
 	References used:
 	 - Registry hive basics and structure / https://binaryforay.blogspot.com/2015/01/registry-hive-basics.html?m=1
 	 - Windows registry foremat specs / https://github.com/msuhanov/regf/blob/master/Windows%20registry%20file%20format%20specification.md
+
+----
+
+	This header describes an API for interaction with registry hive file
 */
 
 #ifndef HIVE_H
@@ -235,11 +239,20 @@ int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr);
 // Read named key from hive
 int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_ptr);
 
+// Read value key list from hive
+int read_vk_list(const uint32_t root_offset, FILE* hive_ptr, value_list_t* vk_list_ptr);
+
+// Read value key from hive
+int read_value_key(const uint32_t root_offset, FILE* hive_ptr, value_key_t* vk_ptr);
+
 // Initializes a path to named key
 reg_path_t* reg_make_path(const uint32_t depth, const char** reg_path);
 
 // Enumerates subkey recursivly from given base key
-int enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_ptr, FILE* hive_ptr, named_key_t* out_nk_ptr);
+int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_ptr, FILE* hive_ptr, named_key_t* out_nk_ptr);
+
+// Enumerates specific value key from named key
+int reg_get_value(const named_key_t* base_nk_ptr, const char* value_name, FILE* hive_ptr, value_key_t* out_vk_ptr);
 
 
 #endif

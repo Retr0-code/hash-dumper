@@ -24,7 +24,7 @@ int main(int argc, char const** argv)
 		return -1;
 	}
 	
-	const char* internal_reg[1] = {"InternalTest"};
+	const char* internal_reg[1] = {"InternalDirectory"};
 	reg_path_t* reg_path_ptr = reg_make_path(1, internal_reg);
 
 	if (reg_path_ptr == NULL)
@@ -35,7 +35,7 @@ int main(int argc, char const** argv)
 	}
 
 	named_key_t* final_nk_ptr = malloc(sizeof(named_key_t));
-	if (enum_subkey(base_nk_ptr, reg_path_ptr, hive_handle, final_nk_ptr))
+	if (reg_enum_subkey(base_nk_ptr, reg_path_ptr, hive_handle, final_nk_ptr) != 0)
 	{
 		puts("Failed to enumerate a key");
 		printf("%s\n", strerror(errno));
@@ -44,11 +44,29 @@ int main(int argc, char const** argv)
 
 	puts(final_nk_ptr->name);
 
+	value_list_t* endpoint_value_list = malloc(sizeof(value_list_t));
+	if (read_vk_list(final_nk_ptr->value_offset, hive_handle, endpoint_value_list) != 0)
+	{
+		puts("Failed to read values list");
+		printf("%s\n", strerror(errno));
+		return -1;
+	}
+
+	value_key_t* test_value = malloc(sizeof(value_key_t));
+	if (read_value_key(endpoint_value_list->offsets[0], hive_handle, test_value) != 0)
+	{
+		puts("Failed to read value key");
+		printf("%s\n", strerror(errno));
+		return -1;
+	}
+
 	fclose(hive_handle);
 	free(hive_header_ptr);
 	free(base_nk_ptr);
 	free(reg_path_ptr);
 	free(final_nk_ptr);
+	free(endpoint_value_list);
+	free(test_value);
 
 	return 0;
 }
