@@ -3,3 +3,4 @@ hash_dumper.vcxproj.filters
 hash_dumper.vcxproj.user
 x64/
 Debug/
+hash_table.*

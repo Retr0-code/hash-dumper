@@ -44,28 +44,29 @@ int main(int argc, char const** argv)
 
 	puts(final_nk_ptr->name);
 
-	value_list_t* endpoint_value_list = malloc(sizeof(value_list_t));
-	if (read_vk_list(final_nk_ptr->value_offset, hive_handle, endpoint_value_list) != 0)
+	value_key_t* test_value = malloc(sizeof(value_key_t));
+	if (reg_enum_value(final_nk_ptr, "IncludedParameter", hive_handle, test_value) != 0)
 	{
-		puts("Failed to read values list");
+		puts("Failed to enumerate value");
 		printf("%s\n", strerror(errno));
 		return -1;
 	}
 
-	value_key_t* test_value = malloc(sizeof(value_key_t));
-	if (read_value_key(endpoint_value_list->offsets[0], hive_handle, test_value) != 0)
+	wchar_t* value = reg_get_value(test_value, hive_handle);
+	if (value == NULL)
 	{
-		puts("Failed to read value key");
+		puts("Failed to read value");
 		printf("%s\n", strerror(errno));
 		return -1;
 	}
+
+	printf("%ls\n", value);
 
 	fclose(hive_handle);
 	free(hive_header_ptr);
 	free(base_nk_ptr);
 	free(reg_path_ptr);
 	free(final_nk_ptr);
-	free(endpoint_value_list);
 	free(test_value);
 
 	return 0;

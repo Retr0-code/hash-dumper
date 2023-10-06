@@ -14,6 +14,10 @@
 	References used:
 	 - Registry hive basics and structure / https://binaryforay.blogspot.com/2015/01/registry-hive-basics.html?m=1
 	 - Windows registry foremat specs / https://github.com/msuhanov/regf/blob/master/Windows%20registry%20file%20format%20specification.md
+
+-----
+
+	 	This file defines functions for API for interaction with registry hive file
 */
 
 
@@ -21,24 +25,20 @@
 
 int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr)
 {
-	// Validates hive fd
-	if (hive_ptr == NULL)
+	// Validating parameters
+	if (hive_ptr == NULL || hive_header_ptr == NULL)
 	{
 		errno = EINVAL;
 		return -1;
 	}
 
-	// Checks if allocated
-	if (hive_header_ptr == NULL)
-		return -2;
-
 	// Set cursor to specified offset
 	if (fseek(hive_ptr, 0, SEEK_SET) != 0)
-		return -3;
+		return -2;
 
 	// Read signature struct
 	if (fread(hive_header_ptr, sizeof(hive_header_t) - sizeof(wchar_t) * 255, 1, hive_ptr) != 1)
-		return -4;
+		return -3;
 
 #if (HV_ENDIANNESS == HV_BIG_ENDIAN)
 	hive_header_ptr->last_write_time = BYTE_SWAP64(hive_header_ptr->last_write_time);
@@ -48,13 +48,13 @@ int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr)
 	if (hive_header_ptr->signature != HIVE_SIGN)
 	{
 		errno = EBADF;
-		return -5;
+		return -4;
 	}
 
 	// Get filename
 	if (fgetws(hive_header_ptr->name, 255, hive_ptr) == NULL)
 	{
-		return -6;
+		return -5;
 	}
 
 	return 0;
@@ -62,43 +62,33 @@ int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr)
 
 int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_ptr)
 {
-	if (root_offset == 0)
+	// Validating parameters
+	if (root_offset == 0 || hive_ptr == NULL || nk_ptr == NULL)
 	{
 		errno = EINVAL;
 		return -1;
 	}
 
-	// Validation of hive fd
-	if (hive_ptr == NULL)
-	{
-		errno = EINVAL;
-		return -2;
-	}
-
-	// Checking if allocated
-	if (nk_ptr == NULL)
-		return -3;
-
 	// Setting cursor to named key offset
 	if (fseek(hive_ptr, 0x1000 + root_offset, SEEK_SET) != 0)
-		return -4;
+		return -2;
 
 	// Reading structure
 	if (fread(nk_ptr, sizeof(named_key_t) - sizeof(nk_ptr->name), 1, hive_ptr) != 1)
-		return -5;
+		return -3;
 
 	// Validation of a signature
 	if (nk_ptr->signature != NK_SIGN)
 	{
 		errno = EBADF;
-		return -6;
+		return -4;
 	}
 
 	// If size less then 0 it means that node is in use, otherwise it's not
 	if (nk_ptr->size >= 0)
 	{
 		errno = EBADF;
-		return -7;
+		return -5;
 	}
 
 	// Inverse the size
@@ -110,10 +100,10 @@ int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_p
 
 	nk_ptr->name = malloc(nk_ptr->name_length + 1);
 	if (nk_ptr->name == NULL)
-		return -8;
+		return -6;
 
 	if (fread(nk_ptr->name, nk_ptr->name_length, 1, hive_ptr) != 1)
-		return -9;
+		return -7;
 
 	nk_ptr->name[nk_ptr->name_length] = '\0';
 	return 0;
@@ -121,38 +111,26 @@ int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_p
 
 int read_vk_list(const uint32_t root_offset, FILE* hive_ptr, value_list_t* vk_list_ptr)
 {
-	// Validation of parameters
-	if (root_offset == 0)
+	// Validating parameters
+	if (root_offset == 0 || hive_ptr == NULL || vk_list_ptr == NULL)
 	{
 		errno = EINVAL;
 		return -1;
 	}
 
-	if (hive_ptr == NULL)
-	{
-		errno = EINVAL;
-		return -2;
-	}
-
-	if (vk_list_ptr == NULL)
-	{
-		errno = EINVAL;
-		return -3;
-	}
-
 	// Setting cursor by offset parameter
 	if (fseek(hive_ptr, 0x1000 + root_offset, SEEK_SET) != 0)
-		return -4;
+		return -2;
 
 	// Reading size of a list
 	if (fread(&vk_list_ptr->size, sizeof(int32_t), 1, hive_ptr) != 1)
-		return -5;
+		return -3;
 
 	// If size less then 0 it means that node is in use, otherwise it's not
 	if (vk_list_ptr->size >= 0)
 	{
 		errno = EBADF;
-		return -6;
+		return -4;
 	}
 
 	vk_list_ptr->size = 0 - vk_list_ptr->size;
@@ -161,54 +139,44 @@ int read_vk_list(const uint32_t root_offset, FILE* hive_ptr, value_list_t* vk_li
 	if (vk_list_ptr->offsets == NULL)
 	{
 		errno = EFAULT;
-		return -7;
+		return -5;
 	}
 
 	// Reading offsets
 	if (fread(vk_list_ptr->offsets, vk_list_ptr->size * sizeof(uint32_t), 1, hive_ptr) != 1)
-		return -8;
+		return -6;
 
 	return 0;
 }
 
 int read_value_key(const uint32_t root_offset, FILE* hive_ptr, value_key_t* vk_ptr)
 {
-	if (root_offset == 0)
+	// Validating parameters
+	if (root_offset == 0 || hive_ptr == NULL || vk_ptr == NULL)
 	{
 		errno = EINVAL;
 		return -1;
 	}
 
-	// Validation of hive fd
-	if (hive_ptr == NULL)
-	{
-		errno = EINVAL;
-		return -2;
-	}
-
-	// Checking if allocated
-	if (vk_ptr == NULL)
-		return -3;
-
 	// Setting cursor to value key offset
 	if (fseek(hive_ptr, 0x1000 + root_offset, SEEK_SET) != 0)
-		return -4;
+		return -2;
 
 	if (fread(vk_ptr, sizeof(value_key_t) - sizeof(vk_ptr->name), 1, hive_ptr) != 1)
-		return -5;
+		return -3;
 
 	// Validation of a signature
 	if (vk_ptr->signature != VK_SIGN)
 	{
 		errno = EBADF;
-		return -6;
+		return -4;
 	}
 
 	// If size less then 0 it means that node is in use, otherwise it's not
 	if (vk_ptr->size >= 0)
 	{
 		errno = EBADF;
-		return -7;
+		return -5;
 	}
 
 	// Inverse the size
@@ -227,11 +195,11 @@ int read_value_key(const uint32_t root_offset, FILE* hive_ptr, value_key_t* vk_p
 
 	vk_ptr->name = malloc(vk_ptr->size + 1);
 	if (vk_ptr->name == NULL)
-		return -8;
+		return -6;
 
 	// Reading value's name (ASCII)
 	if (fread(vk_ptr->name, vk_ptr->name_length, 1, hive_ptr) != 1)
-		return -9;
+		return -7;
 
 	vk_ptr->name[vk_ptr->name_length] = '\0';
 
@@ -240,14 +208,8 @@ int read_value_key(const uint32_t root_offset, FILE* hive_ptr, value_key_t* vk_p
 
 reg_path_t* reg_make_path(const uint32_t depth, const char** reg_path)
 {
-	// Validation of given parameters
-	if (depth == 0)
-	{
-		errno = EINVAL;
-		return NULL;
-	}
-
-	if (reg_path == NULL)
+	// Validating parameters
+	if (depth == 0 || reg_path == NULL)
 	{
 		errno = EINVAL;
 		return NULL;
@@ -284,29 +246,11 @@ reg_path_t* reg_make_path(const uint32_t depth, const char** reg_path)
 
 int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_ptr, FILE* hive_ptr, named_key_t* out_nk_ptr)
 {
-	// Validation of parameters
-	if (base_nk_ptr == NULL)
+	// Validating parameters
+	if (base_nk_ptr == NULL || reg_path_ptr == NULL || hive_ptr == NULL || out_nk_ptr == NULL)
 	{
 		errno = EINVAL;
 		return -1;
-	}
-
-	if (reg_path_ptr == NULL)
-	{
-		errno = EINVAL;
-		return -2;
-	}
-
-	if (hive_ptr == NULL)
-	{
-		errno = EINVAL;
-		return -3;
-	}
-	
-	if (out_nk_ptr == NULL)
-	{
-		errno = EINVAL;
-		return -4;
 	}
 
 	// Condition to end a recursion
@@ -317,31 +261,31 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 
 	// Setting cursor by offset parameter
 	if (fseek(hive_ptr, 0x1000 + base_nk_ptr->subkey_offset, SEEK_SET) != 0)
-		return -5;
+		return -2;
 
 	// Reading fast leaf (offsets list)
 	fast_leaf_t sub_keys;
 	if (fread(&sub_keys, sizeof(fast_leaf_t) - sizeof(sub_keys.elements), 1, hive_ptr) != 1)
-		return -6;
+		return -3;
 
 	// Validation of a signature
 	if (sub_keys.signature != LF_SIGN)
 	{
 		errno = EBADF;
-		return -7;
+		return -4;
 	}
 
 	// Checking if elements are existing
 	if (sub_keys.elements_amount == 0)
 	{
-		return -8;
+		return -5;
 	}
 
 	// If size less then 0 it means that node is in use, otherwise it's not
 	if (sub_keys.size >= 0)
 	{
 		errno = EBADF;
-		return -9;
+		return -6;
 	}
 
 	sub_keys.size = 0 - sub_keys.size;
@@ -351,14 +295,14 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 	if (sub_keys.elements == NULL)
 	{
 		errno = EFAULT;
-		return -10;
+		return -7;
 	}
 
 	// Reading elements to array
 	if (fread(sub_keys.elements, sub_keys.elements_amount * sizeof(lf_element_t), 1, hive_ptr) != 1)
 	{
 		free(sub_keys.elements);
-		return -11;
+		return -8;
 	}
 
 	// Searching for offset of embedded key
@@ -390,7 +334,7 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 	{
 		free(sub_keys.elements);
 		errno = ENOENT;
-		return -12;
+		return -9;
 	}
 
 	// Delete first node of path
@@ -404,9 +348,76 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 	if (reg_enum_subkey(out_nk_ptr, &next_key_path, hive_ptr, out_nk_ptr) != 0)
 	{
 		free(sub_keys.elements);
-		return -15;
+		return -10;
 	}
 
 	free(sub_keys.elements);
 	return 0;
 }
+
+int reg_enum_value(const named_key_t* base_nk_ptr, const char* value_name, FILE* hive_ptr, value_key_t* out_vk_ptr)
+{
+	// Validating parameters
+	if (base_nk_ptr == NULL || value_name == NULL || hive_ptr == NULL || out_vk_ptr == NULL)
+	{
+		errno = EINVAL;
+		return -1;
+	}
+
+	// Allocating value list
+	value_list_t value_list;
+	if (read_vk_list(base_nk_ptr->value_offset, hive_ptr, &value_list) != 0)
+		return -2;
+
+	// Allocating temporary value key
+	value_key_t vk_temp;
+	// Iterate through values
+	for (size_t i = 0; i < base_nk_ptr->values_amount; i++)
+	{
+		// Read value from offset from the list
+		if (read_value_key(value_list.offsets[i], hive_ptr, &vk_temp) != 0)
+			return -3;
+
+		// Validating temp value
+		if (strcmp(vk_temp.name, value_name) == 0)
+		{
+			memcpy(out_vk_ptr, &vk_temp, sizeof(value_key_t));
+			return 0;
+		}
+	}
+
+	errno = ENXIO;
+	return -5;
+}
+
+void* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr)
+{
+	// Validating parameters
+	if (vk_ptr == NULL || hive_ptr == NULL)
+	{
+		errno = EINVAL;
+		return NULL;
+	}
+
+	// Allocating space for a value
+	void* value = malloc(vk_ptr->data_size);
+	if (value == NULL)
+	{
+		errno = EFAULT;
+		return NULL;
+	}
+
+	// Moving cursor to value position
+	if (fseek(hive_ptr, 0x1004 + vk_ptr->data_offset_val, SEEK_SET) != 0)
+		return NULL;
+
+	// Reading value
+	if (fread(value, vk_ptr->data_size, 1, hive_ptr) != 1)
+	{
+		free(value);
+		return NULL;
+	}
+
+	return value;
+}
+

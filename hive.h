@@ -181,7 +181,6 @@ typedef PACK(struct value_list_t
 	uint32_t* offsets;			// Offsets to value_key_t structures
 }) value_list_t;
 
-
 /*
 A SK (security key) record contains the information
 necessary to define access controls for the Registry.
@@ -252,7 +251,9 @@ reg_path_t* reg_make_path(const uint32_t depth, const char** reg_path);
 int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_ptr, FILE* hive_ptr, named_key_t* out_nk_ptr);
 
 // Enumerates specific value key from named key
-int reg_get_value(const named_key_t* base_nk_ptr, const char* value_name, FILE* hive_ptr, value_key_t* out_vk_ptr);
+int reg_enum_value(const named_key_t* base_nk_ptr, const char* value_name, FILE* hive_ptr, value_key_t* out_vk_ptr);
 
+// Returns value of specified key
+void* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr);
 
 #endif
