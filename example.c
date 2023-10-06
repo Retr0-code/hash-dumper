@@ -1,8 +1,19 @@
-#include "hive.h"
 #include <stdio.h>
+
+
+#include "hive.h"
+#include "hash_dump.h"
 
 int main(int argc, char const** argv)
 {
+	if (reg_save_key("SAM", "C:\\Users\\TASCHER\\source\\repos\\hash_dumper\\hash_dumper\\sam.dump") != 0)
+	{
+		puts("Failed to save hive");
+		printf("GetLastError %i\n", GetLastError());
+		return -1;
+	}
+
+	/*
 	FILE* hive_handle = fopen("./TestingDumper.save", "rb");
 
 	if (hive_handle == NULL)
@@ -68,6 +79,7 @@ int main(int argc, char const** argv)
 	free(reg_path_ptr);
 	free(final_nk_ptr);
 	free(test_value);
+	*/
 
 	return 0;
 }
