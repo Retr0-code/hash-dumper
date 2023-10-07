@@ -18,7 +18,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#if defined(WIN32) || defined(WIN64)
+#if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
 #else
 typedef int BOOL;

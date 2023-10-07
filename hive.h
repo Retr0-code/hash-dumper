@@ -149,8 +149,8 @@ typedef PACK(struct named_key_t
 	uint32_t security_offset;	// Offset to security key record
 	uint32_t class_name_offset;	// Offset of nodes class name
 	uint64_t giant_padding[2];	// Unknown random padding
-	uint32_t class_length;		// Length of node class name
-	uint32_t name_length;		// Length of node name
+	int32_t class_length;		// Length of node class name
+	int32_t name_length;		// Length of node name
 	char* name;					// Name of a key
 }) named_key_t;
 
@@ -257,6 +257,6 @@ int reg_enum_value(const named_key_t* base_nk_ptr, const char* value_name, FILE*
 void* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr);
 
 // Returns class value of specified key
-wchar_t* reg_get_class(const named_key_t* nk_ptr, FILE* hive_ptr);
+wchar_t* reg_get_class(named_key_t* nk_ptr, FILE* hive_ptr);
 
 #endif

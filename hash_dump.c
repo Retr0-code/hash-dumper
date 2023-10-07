@@ -15,7 +15,7 @@
 
 #include "hash_dump.h"
 
-#if defined(WIN32) || defined(WIN64)
+#if defined(_WIN32) || defined(_WIN64)
 int reg_save_key(const char* key_name, const char* save_to)
 {
 	HANDLE token_handle = NULL;
