@@ -256,4 +256,7 @@ int reg_enum_value(const named_key_t* base_nk_ptr, const char* value_name, FILE*
 // Returns value of specified key
 void* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr);
 
+// Returns class value of specified key
+wchar_t* reg_get_class(const named_key_t* nk_ptr, FILE* hive_ptr);
+
 #endif

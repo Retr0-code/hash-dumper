@@ -15,4 +15,7 @@ typedef unsigned long long errno_t;
 
 #endif
 
+// Deallocates pointers
+void cleanup_pointers(...);
+
 #endif

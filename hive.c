@@ -421,3 +421,33 @@ void* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr)
 	return value;
 }
 
+wchar_t* reg_get_class(const named_key_t* nk_ptr, FILE* hive_ptr)
+{
+    // Validating parameters
+	if (nk_ptr == NULL || hive_ptr == NULL)
+	{
+		errno = EINVAL;
+		return NULL;
+	}
+
+	// Allocating space for a value
+	void* class_value = malloc(nk_ptr->class_length);
+	if (class_value == NULL)
+	{
+		errno = EFAULT;
+		return NULL;
+	}
+
+	// Moving cursor to value position
+	if (fseek(hive_ptr, 0x1004 + nk_ptr->class_name_offset, SEEK_SET) != 0)
+		return NULL;
+
+	// Reading value
+	if (fread(class_value, nk_ptr->class_length, 1, hive_ptr) != 1)
+	{
+		free(class_value);
+		return NULL;
+	}
+
+	return class_value;
+}
