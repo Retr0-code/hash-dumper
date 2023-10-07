@@ -4,3 +4,6 @@ hash_dumper.vcxproj.user
 x64/
 Debug/
 hash_table.*
+hives
+build
+.vscode

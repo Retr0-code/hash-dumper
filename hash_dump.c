@@ -15,6 +15,7 @@
 
 #include "hash_dump.h"
 
+#if defined(WIN32) || defined(WIN64)
 int reg_save_key(const char* key_name, const char* save_to)
 {
 	HANDLE token_handle = NULL;
@@ -71,3 +72,17 @@ int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable)
 
 	return 0;
 }
+
+#else
+
+int reg_save_key(const char* key_name, const char* save_to)
+{
+	return 0xFA17;
+}
+
+int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable)
+{
+	return 0xFA17;
+}
+
+#endif

@@ -18,7 +18,13 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#if defined(WIN32) || defined(WIN64)
 #include <Windows.h>
+#else
+typedef int BOOL;
+typedef void* HANDLE;
+typedef wchar_t* LPCTSTR;
+#endif
 
 // Saves registry hive
 int reg_save_key(const char* key_name, const char* save_to);
