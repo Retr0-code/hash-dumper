@@ -47,7 +47,7 @@ int main(int argc, char const *argv[])
         return -1;
     }
 
-    wchar_t* boot_key_hex = malloc(32 * sizeof(wchar_t));
+    wchar_t* boot_key_hex[33];
     if (boot_key_hex == NULL)
     {
         puts("Unable to allocate bootkey");
@@ -64,9 +64,9 @@ int main(int argc, char const *argv[])
     }
 
     printf("%ls\n", boot_key_hex);
+    bootkey_from_u16(boot_key_hex);
 
     fclose(system_hive);
-    free(boot_key_hex);
 
     if (remove(path_for_save) != 0)
     {

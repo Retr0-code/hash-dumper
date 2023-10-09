@@ -126,6 +126,47 @@ int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey)
         free(bootkey_part);
     }
 
+    out_bootkey[32] = L'\0';
+    
+    for (size_t i = 0; i < 32; i++)
+        out_bootkey[i] = towupper(out_bootkey[i]);
+
     cleanup_pointers(5, hive_header_ptr, base_nk_ptr, lsa_nk_ptr, reg_lsa_path, reg_endpoint_path);
     return 0;
+}
+
+uint8_t* bootkey_from_u16(const wchar_t* wstr)
+{
+    // Validating parameter
+    if (wstr == NULL)
+    {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    // Checking a bootkey length
+    size_t wstr_length = wcslen(wstr);
+    if (wstr_length != 32)
+    {
+        errno = EBADF;
+        return NULL;
+    }
+
+    // Raw bootkey data array
+    uint8_t bootkey_decoded[16];
+    for (size_t i = 0; i < 32; i += 2)
+    {
+        uint8_t fh = (*(wstr + i) & 0x00ff);        // Taking first 4 bits of an integer
+        uint8_t sh = (*(wstr + i + 1) & 0x00ff);    // Taking second 4 bits of an integer
+
+        // Converting half-bytes by symbolic table
+        // Chars start from 0x41 and nums - from 0x30
+        fh -= fh >= 'A' ? 0x37 : 0x30;
+        sh -= sh >= 'A' ? 0x37 : 0x30;
+
+        // Writing result to array
+        bootkey_decoded[i / 2] = (fh << 4) | sh;
+    }
+
+    return bootkey_decoded;
 }

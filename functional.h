@@ -32,9 +32,20 @@ typedef unsigned long long errno_t;
 
 #define GetLastError() errno
 
+#define BYTE_SWAP16(x) bswap_16(x)
+#define BYTE_SWAP32(x) bswap_32(x)
+#define BYTE_SWAP64(x) bswap_64(x)
+
+#elif defined(_WIN32) || defined(_WIN64)
+
+#define BYTE_SWAP16(x) _byteswap_ushort(x)
+#define BYTE_SWAP32(x) _byteswap_ulong(x)
+#define BYTE_SWAP64(x) _byteswap_uint64(x)
+
 #endif
 
 // Deallocates pointers (if amount of pointers are odd then you have to pass aditional NULL)
 void cleanup_pointers(size_t amount, ...);
+
 
 #endif

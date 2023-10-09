@@ -25,11 +25,17 @@
 #define DUMP_BOOTKEY_H
 
 #include <wchar.h>
+#include <wctype.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <rpcssl.h>
 
 #include "hive.h"
 
+// Reads UTF-16 raw bootkey from system hive
 int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey);
+
+// Converst bootkey wide char string to array of size 16 of one byte integers
+uint8_t* bootkey_from_u16(const wchar_t* wstr);
 
 #endif

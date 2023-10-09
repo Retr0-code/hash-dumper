@@ -34,10 +34,6 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
-
-#elif defined(__linux__) || defined(__unix__)
-
-#include "functional.h"
 #endif
 
 #define HV_LITTLE_ENDIAN 1
@@ -52,15 +48,9 @@ By default endianness type is little endian, but you can change it to BIG_ENDIAN
 #ifdef _MSC_VER
  #define PACK(__decl__) __pragma(pack(push, 1)) __decl__ __pragma(pack(pop))
 
-#define BYTE_SWAP16(x) _byteswap_ushort(x)
-#define BYTE_SWAP32(x) _byteswap_ulong(x)
-#define BYTE_SWAP64(x) _byteswap_uint64(x)
-
 #elif defined(__GNUC__)
 #define PACK(__decl__) __decl__ __attribute__((__packed__))
-#define BYTE_SWAP16(x) bswap_16(x)
-#define BYTE_SWAP32(x) bswap_32(x)
-#define BYTE_SWAP64(x) bswap_64(x)
+
 #endif
 
 
