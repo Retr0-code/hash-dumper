@@ -64,7 +64,6 @@ int main(int argc, char const *argv[])
     }
 
     printf("%ls\n", boot_key_hex);
-    bootkey_from_u16(boot_key_hex);
 
     fclose(system_hive);
 

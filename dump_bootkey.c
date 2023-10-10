@@ -135,6 +135,35 @@ int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey)
     return 0;
 }
 
+// TODO(Complete function)
+int get_hashed_bootkey(const wchar_t* u16_bootkey, uint8_t* hashed_bootkey)
+{
+    // Validating parameters
+    if (u16_bootkey == NULL || hashed_bootkey == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Decoding hex string to raw values
+    uint8_t* raw_bootkey = bootkey_from_u16(u16_bootkey);
+    if (raw_bootkey == NULL)
+        return -2;
+
+    // Array of indexes for descramble the bootkey
+    uint8_t permutations[RAW_BOOTKEY_LENGTH] = {
+        0x8, 0x5, 0x4, 0x2,
+        0xb, 0x9, 0xd, 0x3,
+        0x0, 0x6, 0x1, 0xc,
+        0xe, 0xa, 0xf, 0x7
+    };
+
+
+    // Permutating the bootkey
+    for (size_t i = 0; i < RAW_BOOTKEY_LENGTH; i++)
+        raw_bootkey[i] = raw_bootkey[permutations[i]];
+}
+
 uint8_t* bootkey_from_u16(const wchar_t* wstr)
 {
     // Validating parameter
@@ -146,18 +175,18 @@ uint8_t* bootkey_from_u16(const wchar_t* wstr)
 
     // Checking a bootkey length
     size_t wstr_length = wcslen(wstr);
-    if (wstr_length != 32)
+    if (wstr_length != RAW_BOOTKEY_LENGTH * 2)
     {
         errno = EBADF;
         return NULL;
     }
 
     // Raw bootkey data array
-    uint8_t bootkey_decoded[16];
-    for (size_t i = 0; i < 32; i += 2)
+    uint8_t bootkey_decoded[RAW_BOOTKEY_LENGTH];
+    for (size_t i = 0; i < RAW_BOOTKEY_LENGTH; i++)
     {
-        uint8_t fh = (*(wstr + i) & 0x00ff);        // Taking first 4 bits of an integer
-        uint8_t sh = (*(wstr + i + 1) & 0x00ff);    // Taking second 4 bits of an integer
+        uint8_t fh = (*(wstr + (i << 1)) & 0x00ff);        // Taking first 4 bits of an integer
+        uint8_t sh = (*(wstr + (i << 1) + 1) & 0x00ff);    // Taking second 4 bits of an integer
 
         // Converting half-bytes by symbolic table
         // Chars start from 0x41 and nums - from 0x30
@@ -165,7 +194,7 @@ uint8_t* bootkey_from_u16(const wchar_t* wstr)
         sh -= sh >= 'A' ? 0x37 : 0x30;
 
         // Writing result to array
-        bootkey_decoded[i / 2] = (fh << 4) | sh;
+        bootkey_decoded[i] = (fh << 4) | sh;
     }
 
     return bootkey_decoded;

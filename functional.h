@@ -19,6 +19,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <errno.h>
+
+#include <openssl/evp.h>
+#include <openssl/md5.h>
 
 #if defined(__linux__) || defined(__unix__)
 
@@ -47,5 +51,7 @@ typedef unsigned long long errno_t;
 // Deallocates pointers (if amount of pointers are odd then you have to pass aditional NULL)
 void cleanup_pointers(size_t amount, ...);
 
+// Returns md5 hash of specified data
+uint8_t* get_md5(const char* data, size_t data_size);
 
 #endif
