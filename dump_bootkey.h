@@ -37,7 +37,7 @@
 int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey);
 
 // Constructs a hashed bootkey from read UTF-16 bootkey hex string
-int get_hashed_bootkey(const wchar_t* u16_bootkey, uint8_t* hashed_bootkey);
+int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hashed_bootkey);
 
 // Converst bootkey wide char string to array of size 16 of one byte integers
 uint8_t* bootkey_from_u16(const wchar_t* wstr);

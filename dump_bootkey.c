@@ -43,9 +43,10 @@ int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey)
         free(hive_header_ptr);
         return -3;
     }
+
     // Allocating base named key
     named_key_t* base_nk_ptr = malloc(sizeof(named_key_t));
-    if (hive_header_ptr == NULL) 
+    if (base_nk_ptr == NULL)
     {
         free(hive_header_ptr);
         return -4;
@@ -136,7 +137,7 @@ int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey)
 }
 
 // TODO(Complete function)
-int get_hashed_bootkey(const wchar_t* u16_bootkey, uint8_t* hashed_bootkey)
+int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hashed_bootkey)
 {
     // Validating parameters
     if (u16_bootkey == NULL || hashed_bootkey == NULL)
@@ -162,6 +163,82 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, uint8_t* hashed_bootkey)
     // Permutating the bootkey
     for (size_t i = 0; i < RAW_BOOTKEY_LENGTH; i++)
         raw_bootkey[i] = raw_bootkey[permutations[i]];
+
+
+
+    // Allocating hive header
+    hive_header_t* hive_header_ptr = malloc(sizeof(hive_header_t));
+    if (hive_header_ptr == NULL)
+        return -3;
+
+    // Reading header structure
+    if (read_hive_header(sam_hive, hive_header_ptr) != 0)
+    {
+        free(hive_header_ptr);
+        return -4;
+    }
+
+    // Allocating base named key
+    named_key_t* base_nk_ptr = malloc(sizeof(named_key_t));
+    if (base_nk_ptr == NULL)
+    {
+        free(hive_header_ptr);
+        return -5;
+    }
+
+    // Reading named key structure
+    if (read_named_key(hive_header_ptr->root_offset, sam_hive, base_nk_ptr) != 0)
+    {
+        free(hive_header_ptr);
+        free(base_nk_ptr);
+        return -6;
+    }
+
+    const char* accounts_path[3] = { "SAM", "Domains", "Accounts" };
+    reg_path_t* reg_accounts_path = reg_make_path(3, accounts_path);
+
+    if (reg_accounts_path == NULL)
+    {
+        cleanup_pointers(3, hive_header_ptr, base_nk_ptr, reg_accounts_path);
+        return -7;
+    }
+
+    // Allocating endpoint named key
+    named_key_t* accounts_nk_ptr = malloc(sizeof(named_key_t));
+    if (accounts_nk_ptr == NULL)
+    {
+        cleanup_pointers(3, hive_header_ptr, base_nk_ptr, reg_accounts_path);
+        return -8;
+    }
+
+    // Enumerating named key by specified path
+    if (reg_enum_subkey(base_nk_ptr, reg_accounts_path, sam_hive, accounts_nk_ptr) != 0)
+    {
+        cleanup_pointers(4, hive_header_ptr, base_nk_ptr, reg_accounts_path, accounts_nk_ptr);
+        return -9;
+    }
+
+    value_key_t* f_value_ptr = malloc(sizeof(value_key_t));
+    if (accounts_nk_ptr == NULL)
+    {
+        cleanup_pointers(4, hive_header_ptr, base_nk_ptr, reg_accounts_path, accounts_nk_ptr);
+        return -10;
+    }
+
+    if (reg_enum_value(accounts_nk_ptr, "F", sam_hive, f_value_ptr) != 0)
+    {
+        cleanup_pointers(5, hive_header_ptr, base_nk_ptr, reg_accounts_path, accounts_nk_ptr, f_value_ptr);
+        return -11;
+    }
+
+    uint8_t* f_value = reg_get_value(f_value_ptr, sam_hive);
+    if (f_value == NULL)
+    {
+        cleanup_pointers(5, hive_header_ptr, base_nk_ptr, reg_accounts_path, accounts_nk_ptr, f_value_ptr);
+        return -12;
+    }
+
+    return 0;
 }
 
 uint8_t* bootkey_from_u16(const wchar_t* wstr)

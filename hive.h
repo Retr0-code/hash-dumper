@@ -222,7 +222,9 @@ typedef PACK(struct reg_path_t
 }) reg_path_t;
 
 
-
+/*
+Defines error statuses for hive API
+*/
 typedef enum hive_error
 {
 	hv_success,
@@ -266,6 +268,6 @@ wchar_t* reg_get_class(named_key_t* nk_ptr, FILE* hive_ptr);
 static inline int hive_file_seek(FILE* hive_ptr, const uint32_t root_offset);
 
 // Reads structure from given give
-static inline int hive_read_struct(FILE* hive_ptr, void* hive_struct, size_t read_size);
+static inline size_t hive_read_struct(FILE* hive_ptr, void* hive_struct, size_t read_size);
 
 #endif

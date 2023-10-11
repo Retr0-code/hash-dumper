@@ -480,7 +480,7 @@ inline int hive_file_seek(FILE* hive_ptr, const uint32_t root_offset)
 	return fseek(hive_ptr, 0x1000 + root_offset, SEEK_SET);
 }
 
-inline int hive_read_struct(FILE* hive_ptr, void* hive_struct, size_t read_size)
+inline size_t hive_read_struct(FILE* hive_ptr, void* hive_struct, size_t read_size)
 {
 	return fread(hive_struct, read_size, 1, hive_ptr);
 }
