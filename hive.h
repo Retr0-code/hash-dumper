@@ -222,6 +222,19 @@ typedef PACK(struct reg_path_t
 }) reg_path_t;
 
 
+
+typedef enum hive_error
+{
+	hv_success,
+	hv_invalid_arg,
+	hv_alloc_error,
+	hv_seek_error,
+	hv_read_error,
+	hv_invalid_signature,
+	hv_inactive_cell,
+	hv_no_entity
+};
+
 // Reads hive header structure
 int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr);
 
@@ -248,5 +261,11 @@ void* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr);
 
 // Returns class value of specified key
 wchar_t* reg_get_class(named_key_t* nk_ptr, FILE* hive_ptr);
+
+// Sets file cursor from beggining to 0x1000 + root_offset
+static inline int hive_file_seek(FILE* hive_ptr, const uint32_t root_offset);
+
+// Reads structure from given give
+static inline int hive_read_struct(FILE* hive_ptr, void* hive_struct, size_t read_size);
 
 #endif
