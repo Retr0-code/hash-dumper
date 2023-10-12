@@ -15,7 +15,71 @@
 
 #include "hash_dump.h"
 
+// Stores files' paths to hives
+static char* system_hive_filepath = NULL;
+static char* sam_hive_filepath = NULL;
+
+
 #if defined(_WIN32) || defined(_WIN64)
+
+int open_hives(FILE** system_hive, FILE** sam_hive)
+{
+	// Reading path to user temp directory
+	char path_for_save[MAX_PATH];
+	if (GetEnvironmentVariableA("TEMP", path_for_save, MAX_PATH) == 0)
+		return -1;
+
+	// Adding backslash to end of path
+	strcat(path_for_save, "\\");
+
+	// Storage for full file path
+	system_hive_filepath = malloc_check(system_hive_filepath, MAX_PATH, -2);
+
+	// Generating random name for saved hive
+	char* random_name = get_random_string(HIVE_NAME_LENGTH);
+
+	// Saving full path with name
+	memcpy(system_hive_filepath, path_for_save, MAX_PATH);
+	strcat(system_hive_filepath, random_name);
+	free(random_name);		// Deleting random string
+
+	// Saving system hive
+	if (reg_save_key("SYSTEM", system_hive_filepath))
+		return -2;
+
+	// Opening a 
+	*system_hive = fopen(system_hive_filepath, "rb");
+	if (system_hive == NULL)
+		return -3;
+
+	sam_hive_filepath = malloc_check(sam_hive_filepath, MAX_PATH, -2);
+
+	random_name = get_random_string(HIVE_NAME_LENGTH);
+	memcpy(sam_hive_filepath, path_for_save, MAX_PATH);
+
+	strcat(sam_hive_filepath, random_name);
+	free(random_name);
+
+	if (reg_save_key("SAM", sam_hive_filepath))
+		return -4;
+
+	*sam_hive = fopen(sam_hive_filepath, "rb");
+	if (sam_hive == NULL)
+		return -5;
+
+	return 0;
+}
+
+void close_hives(FILE** system_hive, FILE** sam_hive)
+{
+	fclose(*system_hive);
+	fclose(*sam_hive);
+
+	remove(system_hive_filepath);
+	remove(sam_hive_filepath);
+	return 0;
+}
+
 int reg_save_key(const char* key_name, const char* save_to)
 {
 	HANDLE token_handle = NULL;
@@ -49,6 +113,11 @@ int reg_save_key(const char* key_name, const char* save_to)
 
 int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable)
 {
+	BOOL is_enabled = FALSE;
+	PrivilegeCheck(token_handle, privilege, &is_enabled);
+	if (is_enabled)
+		return 0;
+
 	TOKEN_PRIVILEGES token_priveleges;
 	LUID luid;
 
@@ -72,6 +141,18 @@ int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable)
 
 	return 0;
 }
+
+//char* sam_hive_filepath()
+//{
+//	static char* sam_filepath = NULL;
+//	return sam_filepath;
+//}
+//
+//char* system_hive_filepath()
+//{
+//	static char* system_filepath = NULL;
+//	return system_filepath;
+//}
 
 #else
 

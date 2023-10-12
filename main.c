@@ -25,27 +25,9 @@
 
 int main(int argc, char const *argv[])
 {
-    char path_for_save[MAX_PATH];
-    if (GetEnvironmentVariableA("TEMP", path_for_save, MAX_PATH) == 0)
-    {
-        printf("Unable to resolve local variable: %i\n", GetLastError());
-        return -1;
-    }
-
-    strcat(path_for_save, "\\system.dump");
-
-    if (reg_save_key("SYSTEM", path_for_save))
-    {
-        puts("Unable to save a hive");
-        return -1;
-    }
-
-    FILE* system_hive = fopen(path_for_save, "rb");
-    if (system_hive == NULL)
-    {
-        printf("Unable to open system hive: %s\n", strerror(errno));
-        return -1;
-    }
+    FILE* system_hive = NULL;
+    FILE* sam_hive = NULL;
+    open_hives(&system_hive, &sam_hive);
 
     wchar_t* boot_key_hex[33];
     if (dump_bootkey(system_hive, boot_key_hex) != 0)
@@ -57,14 +39,7 @@ int main(int argc, char const *argv[])
     }
 
     printf("%ls\n", boot_key_hex);
+    close_hives(&system_hive, &sam_hive);
 
-    fclose(system_hive);
-
-    if (remove(path_for_save) != 0)
-    {
-        printf("Error removing file %s:\n\t%s\n", path_for_save, strerror(errno));
-        return -1;
-    }
-    
     return 0;
 }

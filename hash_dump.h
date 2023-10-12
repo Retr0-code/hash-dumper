@@ -16,6 +16,7 @@
 #ifndef HASH_DUMP_H
 #define HASH_DUMP_H
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #if defined(_WIN32) || defined(_WIN64)
@@ -26,10 +27,26 @@ typedef void* HANDLE;
 typedef wchar_t* LPCTSTR;
 #endif
 
+#include "functional.h"
+
+#define HIVE_NAME_LENGTH 12
+
+// Opens files and writes pointers to specified parameters
+int open_hives(FILE** system_hive, FILE** sam_hive);
+
+// Deletes files and closes handles
+void close_hives(FILE** system_hive, FILE** sam_hive);
+
 // Saves registry hive
-int reg_save_key(const char* key_name, const char* save_to);
+static int reg_save_key(const char* key_name, const char* save_to);
 
 // Sets windows privilege to process
 static int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable);
+
+//// Static variable for SAM filepath
+//static char* sam_hive_filepath();
+//
+//// Static variable for system filepath
+//static char* system_hive_filepath();
 
 #endif

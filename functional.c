@@ -100,3 +100,24 @@ uint8_t* get_md5(const char* data, size_t data_size)
 	EVP_MD_free(md5);
 	return raw_hash;
 }
+
+char* get_random_string(size_t length)
+{
+	// Validating parameter
+	if (length == 0)
+	{
+		errno = EINVAL;
+		return -1;
+	}
+
+	// Allocating string
+	char* str = malloc_check(str, length + 1, -2);
+	srand(time(NULL));
+
+	// Generating string
+	for (size_t i = 0; i < length; i++)
+		str[i] = rand() % (0x5b - 0x41) + 0x41;
+
+	str[length] = '\0';
+	return str;
+}

@@ -16,10 +16,11 @@
 #ifndef FUNCTIONAL_H
 #define FUNCTIONAL_H
 
+#include <time.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdarg.h>
-#include <errno.h>
 
 #include <openssl/evp.h>
 #include <openssl/md5.h>
@@ -70,5 +71,8 @@ void cleanup_pointers(size_t amount, ...);
 
 // Returns md5 hash of specified data
 uint8_t* get_md5(const char* data, size_t data_size);
+
+// Generates random string of specified length
+char* get_random_string(size_t length);
 
 #endif
