@@ -96,12 +96,8 @@ int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_p
 	nk_ptr->flags = BYTE_SWAP16(nk_ptr->flags);
 #endif
 
-	nk_ptr->name = malloc(nk_ptr->name_length + 1);
-	if (nk_ptr->name == NULL)
-	{
-		errno = EFAULT;
-		return hv_alloc_error;
-	}
+
+	nk_ptr->name = malloc_check(nk_ptr->name, nk_ptr->name_length + 1, hv_alloc_error);
 
 	if (fread(nk_ptr->name, nk_ptr->name_length, 1, hive_ptr) != 1)
 		return hv_read_error;
@@ -136,12 +132,7 @@ int read_vk_list(const uint32_t root_offset, FILE* hive_ptr, value_list_t* vk_li
 
 	vk_list_ptr->size = 0 - vk_list_ptr->size;
 
-	vk_list_ptr->offsets = malloc(vk_list_ptr->size * sizeof(uint32_t));
-	if (vk_list_ptr->offsets == NULL)
-	{
-		errno = EFAULT;
-		return hv_alloc_error;
-	}
+	vk_list_ptr->offsets = malloc_check(vk_list_ptr->offsets, vk_list_ptr->size * sizeof(uint32_t), hv_alloc_error);
 
 	// Reading offsets
 	if (fread(vk_list_ptr->offsets, vk_list_ptr->size * sizeof(uint32_t), 1, hive_ptr) != 1)
@@ -194,9 +185,7 @@ int read_value_key(const uint32_t root_offset, FILE* hive_ptr, value_key_t* vk_p
 		return hv_success;
 	}
 
-	vk_ptr->name = malloc(vk_ptr->size + 1);
-	if (vk_ptr->name == NULL)
-		return hv_alloc_error;
+	vk_ptr->name = malloc_check(vk_ptr->name, vk_ptr->name_length + 1, hv_alloc_error);
 
 	// Reading value's name (ASCII)
 	if (fread(vk_ptr->name, vk_ptr->name_length, 1, hive_ptr) != 1)
@@ -217,26 +206,26 @@ reg_path_t* reg_make_path(const uint32_t depth, const char** reg_path)
 	}
 
 	// Allocation of registry path struct
-	reg_path_t* reg_path_ptr = malloc(sizeof(reg_path_t));
-
-	if (reg_path_ptr == NULL)
-	{
-		errno = EFAULT;
-		return NULL;
-	}
+	reg_path_t* reg_path_ptr = malloc_check(reg_path_ptr, sizeof(reg_path_t), hv_alloc_error);
 
 	// Setting given values
 	reg_path_ptr->size = depth;
 	reg_path_ptr->nodes = reg_path;
 
 	// Allocation of hints list (first 4 bytes from name)
-	reg_path_ptr->nodes_hints = malloc(reg_path_ptr->size * sizeof(uint32_t));
-	if (reg_path_ptr->nodes_hints == NULL)
-	{
-		free(reg_path_ptr);
-		errno = EFAULT;
-		return NULL;
-	}
+	reg_path_ptr->nodes_hints = malloc_check_clean(
+		reg_path_ptr->nodes_hints,
+		reg_path_ptr->size * sizeof(uint32_t),
+		1,
+		reg_path_ptr
+	);
+
+	//if (reg_path_ptr->nodes_hints == NULL)
+	//{
+	//	free(reg_path_ptr);
+	//	errno = EFAULT;
+	//	return NULL;
+	//}
 
 	// Filling signatures values
 	for (size_t i = 0; i < reg_path_ptr->size; i++)
@@ -290,12 +279,7 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 	sub_keys.size = 0 - sub_keys.size;
 
 	// Allocating space for fast leaf elements
-	sub_keys.elements = malloc(sub_keys.elements_amount * sizeof(lf_element_t));
-	if (sub_keys.elements == NULL)
-	{
-		errno = EFAULT;
-		return hv_alloc_error;
-	}
+	sub_keys.elements = malloc_check(sub_keys.elements, sub_keys.elements_amount * sizeof(lf_element_t), hv_alloc_error);
 
 	// Reading elements to array
 	if (fread(sub_keys.elements, sub_keys.elements_amount * sizeof(lf_element_t), 1, hive_ptr) != 1)
@@ -411,12 +395,7 @@ void* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr)
 	}
 
 	// Allocating space for a value
-	void* value = malloc(vk_ptr->data_size);
-	if (value == NULL)
-	{
-		errno = EFAULT;
-		return NULL;
-	}
+	void* value = malloc_check(value, vk_ptr->data_size, NULL);
 
 	// Moving cursor to value position
 	if (hive_file_seek(hive_ptr, vk_ptr->data_offset_val + 4) != 0)
@@ -458,12 +437,7 @@ wchar_t* reg_get_class(named_key_t* nk_ptr, FILE* hive_ptr)
 	nk_ptr->class_length = 0 - nk_ptr->class_length;
 
 	// Allocating space for a value
-	wchar_t* class_value = malloc(nk_ptr->class_length);
-	if (class_value == NULL)
-	{
-		errno = EFAULT;
-		return NULL;
-	}
+	wchar_t* class_value = malloc_check(class_value, nk_ptr->class_length, NULL);
 
 	// Reading value
 	if (fread(class_value, nk_ptr->class_length, 1, hive_ptr) != 1)

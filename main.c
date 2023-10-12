@@ -48,13 +48,6 @@ int main(int argc, char const *argv[])
     }
 
     wchar_t* boot_key_hex[33];
-    if (boot_key_hex == NULL)
-    {
-        puts("Unable to allocate bootkey");
-        fclose(system_hive);
-        return -1;
-    }
-
     if (dump_bootkey(system_hive, boot_key_hex) != 0)
     {
         puts("Unable to read bootkey");
