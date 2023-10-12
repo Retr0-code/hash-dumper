@@ -43,10 +43,4 @@ static int reg_save_key(const char* key_name, const char* save_to);
 // Sets windows privilege to process
 static int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable);
 
-//// Static variable for SAM filepath
-//static char* sam_hive_filepath();
-//
-//// Static variable for system filepath
-//static char* system_hive_filepath();
-
 #endif

@@ -142,18 +142,6 @@ int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable)
 	return 0;
 }
 
-//char* sam_hive_filepath()
-//{
-//	static char* sam_filepath = NULL;
-//	return sam_filepath;
-//}
-//
-//char* system_hive_filepath()
-//{
-//	static char* system_filepath = NULL;
-//	return system_filepath;
-//}
-
 #else
 
 int reg_save_key(const char* key_name, const char* save_to)
