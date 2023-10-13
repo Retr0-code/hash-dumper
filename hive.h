@@ -249,8 +249,8 @@ int read_vk_list(const uint32_t root_offset, FILE* hive_ptr, value_list_t* vk_li
 // Read value key from hive
 int read_value_key(const uint32_t root_offset, FILE* hive_ptr, value_key_t* vk_ptr);
 
-// Initializes a path to named key
-reg_path_t* reg_make_path(const uint32_t depth, const char** reg_path);
+// Initializes a path to named key using const char* variadic list
+reg_path_t* reg_make_path(uint32_t depth, ...);
 
 // Enumerates subkey recursivly from given base key
 int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_ptr, FILE* hive_ptr, named_key_t* out_nk_ptr);

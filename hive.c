@@ -37,7 +37,7 @@ int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr)
 		return hv_seek_error;
 
 	// Read signature struct
-	if (fread(hive_header_ptr, sizeof(hive_header_t) - sizeof(wchar_t) * 255, 1, hive_ptr) != 1)
+	if (fread(hive_header_ptr, sizeof(hive_header_t), 1, hive_ptr) != 1)
 		return hv_read_error;
 
 #if (HV_ENDIANNESS == HV_BIG_ENDIAN)
@@ -50,10 +50,6 @@ int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr)
 		errno = EBADF;
 		return hv_invalid_signature;
 	}
-
-	// Get filename
-	if (fgetws(hive_header_ptr->name, 255, hive_ptr) == NULL)
-		return hv_read_error;
 
 	return hv_success;
 }
@@ -196,10 +192,10 @@ int read_value_key(const uint32_t root_offset, FILE* hive_ptr, value_key_t* vk_p
 	return hv_success;
 }
 
-reg_path_t* reg_make_path(const uint32_t depth, const char** reg_path)
+reg_path_t* reg_make_path(uint32_t depth, ...)
 {
 	// Validating parameters
-	if (depth == 0 || reg_path == NULL)
+	if (depth == 0)
 	{
 		errno = EINVAL;
 		return NULL;
@@ -210,26 +206,35 @@ reg_path_t* reg_make_path(const uint32_t depth, const char** reg_path)
 
 	// Setting given values
 	reg_path_ptr->size = depth;
-	reg_path_ptr->nodes = reg_path;
+	reg_path_ptr->nodes = malloc_check_clean(
+		reg_path_ptr->nodes,
+		reg_path_ptr->size * sizeof(const char*),
+		NULL,
+		1,
+		reg_path_ptr
+	);
 
 	// Allocation of hints list (first 4 bytes from name)
 	reg_path_ptr->nodes_hints = malloc_check_clean(
 		reg_path_ptr->nodes_hints,
 		reg_path_ptr->size * sizeof(uint32_t),
+		NULL,
 		1,
 		reg_path_ptr
 	);
 
-	//if (reg_path_ptr->nodes_hints == NULL)
-	//{
-	//	free(reg_path_ptr);
-	//	errno = EFAULT;
-	//	return NULL;
-	//}
+	// Initializing variadic parameters
+	va_list reg_path;
+	va_start(reg_path, depth);
 
-	// Filling signatures values
+	// Filling signatures values and nodes' names
 	for (size_t i = 0; i < reg_path_ptr->size; i++)
+	{
+		reg_path_ptr->nodes[i] = va_arg(reg_path, const char*);
 		reg_path_ptr->nodes_hints[i] = *((uint32_t*)(reg_path_ptr->nodes[i]));
+	}
+	// Deleting variadic parameters list
+	va_end(reg_path);
 
 	return reg_path_ptr;
 }

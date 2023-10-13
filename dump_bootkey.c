@@ -64,8 +64,7 @@ int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey)
     );
 
     // Constructing registry path struct
-    const char* lsa_path[3] = {"ControlSet001", "Control", "Lsa"};
-    reg_path_t* reg_lsa_path = reg_make_path(3, lsa_path);
+    reg_path_t* reg_lsa_path = reg_make_path(3, "ControlSet001", "Control", "Lsa");
     if (reg_lsa_path == NULL)
     {
         cleanup_pointers(3, hive_header_ptr, base_nk_ptr, lsa_nk_ptr);
@@ -97,7 +96,7 @@ int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey)
     for (size_t i = 0; i < 4; i++)
     {
         // Constructing path for enumeration
-        reg_endpoint_path = reg_make_path(1, &lsa_values[i]);
+        reg_endpoint_path = reg_make_path(1, lsa_values[i]);
         if (reg_endpoint_path == NULL)
         {
             cleanup_pointers(5, hive_header_ptr, base_nk_ptr, lsa_nk_ptr, reg_lsa_path, reg_endpoint_path);
@@ -181,8 +180,7 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hash
         return -6;
     }
 
-    const char* accounts_path[3] = { "SAM", "Domains", "Accounts" };
-    reg_path_t* reg_accounts_path = reg_make_path(3, accounts_path);
+    reg_path_t* reg_accounts_path = reg_make_path(3, "SAM", "Domains", "Accounts");
 
     if (reg_accounts_path == NULL)
     {
@@ -261,6 +259,7 @@ uint8_t* bootkey_from_u16(const wchar_t* wstr)
 
         // Writing result to array
         bootkey_decoded[i] = (fh << 4) | sh;
+        printf("%02x", bootkey_decoded[i]);
     }
 
     return bootkey_decoded;

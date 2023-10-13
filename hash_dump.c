@@ -49,7 +49,7 @@ int open_hives(FILE** system_hive, FILE** sam_hive)
 
 	// Opening a 
 	*system_hive = fopen(system_hive_filepath, "rb");
-	if (system_hive == NULL)
+	if (*system_hive == NULL)
 		return -3;
 
 	sam_hive_filepath = malloc_check(sam_hive_filepath, MAX_PATH, -2);
@@ -64,7 +64,7 @@ int open_hives(FILE** system_hive, FILE** sam_hive)
 		return -4;
 
 	*sam_hive = fopen(sam_hive_filepath, "rb");
-	if (sam_hive == NULL)
+	if (*sam_hive == NULL)
 		return -5;
 
 	return 0;
