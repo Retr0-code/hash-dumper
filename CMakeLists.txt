@@ -7,18 +7,18 @@ project(hash-dumper
 )
 
 set(EXEC_SRC
-    main.c
-    hive.c
-    hash_dump.c
-    functional.c
-    dump_bootkey.c
+    src/main.c
+    src/hive.c
+    src/hash_dump.c
+    src/functional.c
+    src/dump_bootkey.c
     )
 
 set(EXEC_HEAD
-    hive.h
-    hash_dump.h
-    functional.h
-    dump_bootkey.h
+    src/hive.h
+    src/hash_dump.h
+    src/functional.h
+    src/dump_bootkey.h
     )
 
 set(OPENSSL_USE_STATIC_LIBS TRUE)
