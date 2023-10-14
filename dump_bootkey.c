@@ -123,9 +123,9 @@ int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey)
         free(bootkey_part);
     }
 
-    out_bootkey[32] = L'\0';
+    out_bootkey[RAW_BOOTKEY_LENGTH * 2] = L'\0';
     
-    for (size_t i = 0; i < 32; i++)
+    for (size_t i = 0; i < RAW_BOOTKEY_LENGTH * 2; i++)
         out_bootkey[i] = towupper(out_bootkey[i]);
 
     cleanup_pointers(5, hive_header_ptr, base_nk_ptr, lsa_nk_ptr, reg_lsa_path, reg_endpoint_path);

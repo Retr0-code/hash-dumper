@@ -70,16 +70,6 @@ int open_hives(FILE** system_hive, FILE** sam_hive)
 	return 0;
 }
 
-void close_hives(FILE** system_hive, FILE** sam_hive)
-{
-	fclose(*system_hive);
-	fclose(*sam_hive);
-
-	remove(system_hive_filepath);
-	remove(sam_hive_filepath);
-	return 0;
-}
-
 int reg_save_key(const char* key_name, const char* save_to)
 {
 	HANDLE token_handle = NULL;
@@ -144,6 +134,22 @@ int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable)
 
 #else
 
+int open_hives(FILE** system_hive, FILE** sam_hive)
+{
+	*system_hive = fopen(system_hive_filepath, "rb");
+	if (*system_hive == NULL)
+		return -1;
+
+	*sam_hive = fopen(sam_hive_filepath, "rb");
+	if (*sam_hive == NULL)
+	{
+		fclose(system_hive);
+		return -2;
+	}
+
+	return 0;
+}
+
 int reg_save_key(const char* key_name, const char* save_to)
 {
 	return 0xFA17;
@@ -154,6 +160,20 @@ int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable)
 	return 0xFA17;
 }
 
+void set_paths(const char* sys_hive_path, const char* sam_hive_path)
+{
+	system_hive_filepath = sys_hive_path;
+	sam_hive_filepath = sam_hive_path;
+}
+
 #endif
 
+void close_hives(FILE** system_hive, FILE** sam_hive)
+{
+	fclose(*system_hive);
+	fclose(*sam_hive);
 
+	remove(system_hive_filepath);
+	remove(sam_hive_filepath);
+	return 0;
+}

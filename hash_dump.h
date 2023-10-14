@@ -43,4 +43,6 @@ static int reg_save_key(const char* key_name, const char* save_to);
 // Sets windows privilege to process
 static int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable);
 
+void set_paths(const char* sys_hive_path, const char* sam_hive_path);
+
 #endif

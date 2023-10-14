@@ -87,6 +87,7 @@ VKF_IS_TOMBSTONE		- a tombstone value has the Data type field set to REG_NONE, t
 #define VK_SIGN		BYTE_SWAP16((uint16_t)0x766B)
 #define SK_SIGN		BYTE_SWAP16((uint16_t)0x736B)
 #define LF_SIGN		BYTE_SWAP16((uint16_t)0x6C66)
+#define LH_SIGN		BYTE_SWAP16((uint16_t)0x6C68)
 
 #elif (HV_ENDIANNESS == HV_BIG_ENDIAN)
 
@@ -96,6 +97,7 @@ VKF_IS_TOMBSTONE		- a tombstone value has the Data type field set to REG_NONE, t
 #define VK_SIGN		(uint16_t)0x766B
 #define SK_SIGN		(uint16_t)0x736B
 #define LF_SIGN		(uint16_t)0x6C66
+#define LH_SIGN		(uint16_t)0x6C68
 
 #else
 
@@ -219,6 +221,7 @@ typedef PACK(struct reg_path_t
 	uint32_t size;
 	const char** nodes;
 	uint32_t* nodes_hints;
+	uint32_t* nodes_hash;
 }) reg_path_t;
 
 
@@ -269,5 +272,8 @@ static inline int hive_file_seek(FILE* hive_ptr, const uint32_t root_offset);
 
 // Reads structure from given give
 static inline size_t hive_read_struct(FILE* hive_ptr, void* hive_struct, size_t read_size);
+
+// Constructs hash for hash_leaf, returns 0 on error
+static uint32_t get_name_hash(const char* leaf_name);
 
 #endif

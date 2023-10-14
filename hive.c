@@ -214,9 +214,18 @@ reg_path_t* reg_make_path(uint32_t depth, ...)
 		reg_path_ptr
 	);
 
-	// Allocation of hints list (first 4 bytes from name)
+	// Allocation hints list (first 4 bytes from name)
 	reg_path_ptr->nodes_hints = malloc_check_clean(
 		reg_path_ptr->nodes_hints,
+		reg_path_ptr->size * sizeof(uint32_t),
+		NULL,
+		1,
+		reg_path_ptr
+	);
+
+	// Allocation hashes list (first 4 bytes from name)
+	reg_path_ptr->nodes_hash = malloc_check_clean(
+		reg_path_ptr->nodes_hash,
 		reg_path_ptr->size * sizeof(uint32_t),
 		NULL,
 		1,
@@ -232,7 +241,9 @@ reg_path_t* reg_make_path(uint32_t depth, ...)
 	{
 		reg_path_ptr->nodes[i] = va_arg(reg_path, const char*);
 		reg_path_ptr->nodes_hints[i] = *((uint32_t*)(reg_path_ptr->nodes[i]));
+		reg_path_ptr->nodes_hash[i] = get_name_hash(reg_path_ptr->nodes[i]);
 	}
+	
 	// Deleting variadic parameters list
 	va_end(reg_path);
 
@@ -264,7 +275,7 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 		return hv_read_error;
 
 	// Validation of a signature
-	if (sub_keys.signature != LF_SIGN)
+	if (sub_keys.signature != LF_SIGN && sub_keys.signature != LH_SIGN)
 	{
 		errno = EBADF;
 		return hv_invalid_signature;
@@ -293,11 +304,15 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 		return hv_read_error;
 	}
 
+	uint32_t* hints = reg_path_ptr->nodes_hints;
+	if (sub_keys.signature == LH_SIGN)
+		hints = reg_path_ptr->nodes_hash;
+
 	// Searching for offset of embedded key
 	uint32_t embedded_nk_offset = 0;
 	for (size_t lf_index = 0; lf_index < sub_keys.elements_amount; lf_index++)
 	{
-		if (sub_keys.elements[lf_index].name_hint == reg_path_ptr->nodes_hints[0])
+		if (sub_keys.elements[lf_index].name_hint == hints[lf_index])
 		{
 			embedded_nk_offset = sub_keys.elements[lf_index].node_offset;
 			
@@ -315,7 +330,7 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 			}
 
 			// Checking names if hints are identical
-			if (strcmp(out_nk_ptr->name, reg_path_ptr->nodes[0]) == 0)
+			if (strcmp(out_nk_ptr->name, reg_path_ptr->nodes[0]) == 0 || sub_keys.signature == LH_SIGN)
 				break;
 		}
 	}
@@ -462,4 +477,18 @@ inline int hive_file_seek(FILE* hive_ptr, const uint32_t root_offset)
 inline size_t hive_read_struct(FILE* hive_ptr, void* hive_struct, size_t read_size)
 {
 	return fread(hive_struct, read_size, 1, hive_ptr);
+}
+
+uint32_t get_name_hash(const char* leaf_name)
+{
+	if (leaf_name == NULL)
+		return 0;
+
+	uint32_t hash = 0;
+	size_t length = strlen(leaf_name);
+
+	for (size_t i = 0; i < length + 1; i++)
+		hash = hash * 37 + toupper(leaf_name[i]);
+
+	return hash;
 }

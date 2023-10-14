@@ -18,24 +18,30 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include <Windows.h>
 
 #include "hash_dump.h"
 #include "dump_bootkey.h"
 
 int main(int argc, char const *argv[])
 {
+#ifdef __linux__
+    set_paths("hives/system.dump", "hives/sam.dump");
+#endif
+
     FILE* system_hive = NULL;
     FILE* sam_hive = NULL;
     open_hives(&system_hive, &sam_hive);
 
     wchar_t* boot_key_hex[33];
-    if (dump_bootkey(system_hive, boot_key_hex) != 0)
     {
-        puts("Unable to read bootkey");
-        fclose(system_hive);
-        free(boot_key_hex);
-        return -1;
+        int result = dump_bootkey(system_hive, boot_key_hex);
+        if (result != 0)
+        {
+            printf("Unable to read bootkey: %i\n", result);
+            fclose(system_hive);
+            free(boot_key_hex);
+            return -1;
+        }
     }
 
     printf("%ls\n", boot_key_hex);

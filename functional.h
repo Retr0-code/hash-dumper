@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include <openssl/evp.h>
 #include <openssl/md5.h>
@@ -37,9 +38,6 @@ typedef unsigned long long errno_t;
 #define BYTE_SWAP64(x) bswap_64(x)
 
 #define GetLastError() errno
-
-wchar_t* fgetws(wchar_t* str, int numChars, FILE* stream);
-
 
 #elif defined(_WIN32) || defined(_WIN64)
 

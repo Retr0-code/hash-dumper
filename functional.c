@@ -14,43 +14,6 @@
 */
 #include "functional.h"
 
-
-#if defined(__linux__) || defined(__unix__)
-wchar_t* fgetws(wchar_t* str, int num_chars, FILE* stream)
-{
-	wchar_t* temp_str = malloc_check(num_chars * sizeof(wchar_t), NULL);
-	wchar_t read_char = 0xffff;
-	size_t read_amount = 0;
-	--num_chars;
-
-	// While char is not a null or new line and amount of read bytes is less then allocated memory
-	for (; (read_char != (wchar_t)'\0' || read_char != (wchar_t)0x0D0A) && (read_amount < num_chars); read_amount++)
-	{
-		if (fread(&read_char, sizeof(read_char), 1, stream) != 1)
-		{
-			free(temp_str);
-			return NULL;
-		}
-
-		temp_str[read_amount] = read_char;
-	}
-	++read_amount;
-
-	temp_str[read_amount] = '\0';
-
-	if (read_amount == num_chars)
-	{
-		str = temp_str;
-		return temp_str;
-	}
-
-	str = malloc_check(read_amount, NULL);
-	memcpy(str, temp_str, sizeof(wchar_t) * read_amount);
-	free(temp_str);
-	return str;
-}
-#endif
-
 void cleanup_pointers(size_t amount, ...)
 {
     va_list pointers;
