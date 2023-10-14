@@ -228,8 +228,9 @@ reg_path_t* reg_make_path(uint32_t depth, ...)
 		reg_path_ptr->nodes_hash,
 		reg_path_ptr->size * sizeof(uint32_t),
 		NULL,
-		1,
-		reg_path_ptr
+		2,
+		reg_path_ptr,
+		reg_path_ptr->nodes_hints
 	);
 
 	// Initializing variadic parameters
@@ -312,7 +313,7 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 	uint32_t embedded_nk_offset = 0;
 	for (size_t lf_index = 0; lf_index < sub_keys.elements_amount; lf_index++)
 	{
-		if (sub_keys.elements[lf_index].name_hint == hints[lf_index])
+		if (sub_keys.elements[lf_index].name_hint == hints[0])
 		{
 			embedded_nk_offset = sub_keys.elements[lf_index].node_offset;
 			
@@ -347,7 +348,8 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 	reg_path_t next_key_path = {
 		.size = reg_path_ptr->size - 1,
 		.nodes = &reg_path_ptr->nodes[1],
-		.nodes_hints = &reg_path_ptr->nodes_hints[1]
+		.nodes_hints = &reg_path_ptr->nodes_hints[1],
+		.nodes_hash = &reg_path_ptr->nodes_hash[1]
 	};
 
 	// Start enumeration from new key
@@ -484,10 +486,10 @@ uint32_t get_name_hash(const char* leaf_name)
 	if (leaf_name == NULL)
 		return 0;
 
-	uint32_t hash = 0;
+	uint64_t hash = 0;
 	size_t length = strlen(leaf_name);
 
-	for (size_t i = 0; i < length + 1; i++)
+	for (size_t i = 0; i < length; i++)
 		hash = hash * 37 + toupper(leaf_name[i]);
 
 	return hash;

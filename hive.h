@@ -274,6 +274,6 @@ static inline int hive_file_seek(FILE* hive_ptr, const uint32_t root_offset);
 static inline size_t hive_read_struct(FILE* hive_ptr, void* hive_struct, size_t read_size);
 
 // Constructs hash for hash_leaf, returns 0 on error
-static uint32_t get_name_hash(const char* leaf_name);
+uint32_t get_name_hash(const char* leaf_name);
 
 #endif
