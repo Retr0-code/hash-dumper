@@ -209,7 +209,10 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hash
         f_value_ptr,
         sizeof(value_key_t),
         -10, 4,
-        hive_header_ptr, base_nk_ptr, reg_accounts_path, accounts_nk_ptr
+        hive_header_ptr,
+        base_nk_ptr,
+        reg_accounts_path,
+        accounts_nk_ptr
     );
 
     if (reg_enum_value(accounts_nk_ptr, "F", sam_hive, f_value_ptr) != 0)
@@ -259,7 +262,6 @@ uint8_t* bootkey_from_u16(const wchar_t* wstr)
 
         // Writing result to array
         bootkey_decoded[i] = (fh << 4) | sh;
-        printf("%02x", bootkey_decoded[i]);
     }
 
     return bootkey_decoded;

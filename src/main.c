@@ -26,6 +26,8 @@ int main(int argc, char const *argv[])
 {
 #ifdef __linux__
     set_paths("hives/system.dump", "hives/sam.dump");
+#elif defined(_WIN32) || defined(_WIN64)
+    resolve_temp_paths();
 #endif
 
     FILE* system_hive = NULL;

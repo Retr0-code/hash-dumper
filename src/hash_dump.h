@@ -31,6 +31,12 @@ typedef wchar_t* LPCTSTR;
 
 #define HIVE_NAME_LENGTH 12
 
+// Sets paths to hives
+void set_paths(const char* sys_hive_path, const char* sam_hive_path);
+
+// Resolves %temp% paths and sets static variables
+int resolve_temp_paths();
+
 // Opens files and writes pointers to specified parameters
 int open_hives(FILE** system_hive, FILE** sam_hive);
 
@@ -42,7 +48,5 @@ static int reg_save_key(const char* key_name, const char* save_to);
 
 // Sets windows privilege to process
 static int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable);
-
-void set_paths(const char* sys_hive_path, const char* sam_hive_path);
 
 #endif

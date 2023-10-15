@@ -22,7 +22,7 @@ static char* sam_hive_filepath = NULL;
 
 #if defined(_WIN32) || defined(_WIN64)
 
-int open_hives(FILE** system_hive, FILE** sam_hive)
+int resolve_temp_paths()
 {
 	// Reading path to user temp directory
 	char path_for_save[MAX_PATH];
@@ -32,10 +32,10 @@ int open_hives(FILE** system_hive, FILE** sam_hive)
 	// Adding backslash to end of path
 	strcat(path_for_save, "\\");
 
-	// Storage for full file path
+	// Storage for full system file path
 	system_hive_filepath = malloc_check(system_hive_filepath, MAX_PATH, -2);
 
-	// Generating random name for saved hive
+	// Generating random name for saved system hive
 	char* random_name = get_random_string(HIVE_NAME_LENGTH);
 
 	// Saving full path with name
@@ -47,13 +47,10 @@ int open_hives(FILE** system_hive, FILE** sam_hive)
 	if (reg_save_key("SYSTEM", system_hive_filepath))
 		return -2;
 
-	// Opening a 
-	*system_hive = fopen(system_hive_filepath, "rb");
-	if (*system_hive == NULL)
-		return -3;
-
+	// Storage for full sam file path
 	sam_hive_filepath = malloc_check(sam_hive_filepath, MAX_PATH, -2);
 
+	// Generating random name for saved sam hive
 	random_name = get_random_string(HIVE_NAME_LENGTH);
 	memcpy(sam_hive_filepath, path_for_save, MAX_PATH);
 
@@ -62,10 +59,6 @@ int open_hives(FILE** system_hive, FILE** sam_hive)
 
 	if (reg_save_key("SAM", sam_hive_filepath))
 		return -4;
-
-	*sam_hive = fopen(sam_hive_filepath, "rb");
-	if (*sam_hive == NULL)
-		return -5;
 
 	return 0;
 }
@@ -134,6 +127,29 @@ int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable)
 
 #else
 
+int resolve_temp_paths()
+{
+	return 0xFA17;
+}
+
+int reg_save_key(const char* key_name, const char* save_to)
+{
+	return 0xFA17;
+}
+
+int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable)
+{
+	return 0xFA17;
+}
+
+#endif
+
+void set_paths(const char* sys_hive_path, const char* sam_hive_path)
+{
+	system_hive_filepath = sys_hive_path;
+	sam_hive_filepath = sam_hive_path;
+}
+
 int open_hives(FILE** system_hive, FILE** sam_hive)
 {
 	*system_hive = fopen(system_hive_filepath, "rb");
@@ -149,24 +165,6 @@ int open_hives(FILE** system_hive, FILE** sam_hive)
 
 	return 0;
 }
-
-int reg_save_key(const char* key_name, const char* save_to)
-{
-	return 0xFA17;
-}
-
-int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable)
-{
-	return 0xFA17;
-}
-
-void set_paths(const char* sys_hive_path, const char* sam_hive_path)
-{
-	system_hive_filepath = sys_hive_path;
-	sam_hive_filepath = sam_hive_path;
-}
-
-#endif
 
 void close_hives(FILE** system_hive, FILE** sam_hive)
 {
