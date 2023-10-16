@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hash_dump.h"
+#include "dump_hives.h"
 #include "dump_bootkey.h"
 
 int main(int argc, char const *argv[])
@@ -47,7 +47,13 @@ int main(int argc, char const *argv[])
     }
 
     printf("%ls\n", boot_key_hex);
-    bootkey_from_u16(boot_key_hex);
+
+    uint8_t hashed_bootkey[32];
+    get_hashed_bootkey(boot_key_hex, sam_hive, hashed_bootkey);
+
+    for (size_t i = 0; i < 32; i++)
+        printf("%02x", hashed_bootkey[i]);
+
     close_hives(&system_hive, &sam_hive);
 
     return 0;

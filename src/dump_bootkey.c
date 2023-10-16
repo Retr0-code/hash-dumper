@@ -205,6 +205,7 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hash
         return -9;
     }
 
+    // Allocating value key for "F" value
     value_key_t* f_value_ptr = malloc_check_clean(
         f_value_ptr,
         sizeof(value_key_t),
@@ -215,12 +216,14 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hash
         accounts_nk_ptr
     );
 
+    // Reading "F" value
     if (reg_enum_value(accounts_nk_ptr, "F", sam_hive, f_value_ptr) != 0)
     {
         cleanup_pointers(5, hive_header_ptr, base_nk_ptr, reg_accounts_path, accounts_nk_ptr, f_value_ptr);
         return -11;
     }
 
+    // Saving "F" value
     uint8_t* f_value = reg_get_value(f_value_ptr, sam_hive);
     if (f_value == NULL)
     {
@@ -228,6 +231,35 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hash
         return -12;
     }
 
+    // Determining ntlm version based on F value version
+    hash_bootkey_t hash_function = NULL;
+    switch (f_value[0])
+    {
+    case 2:
+        hash_function = &ntlmv1_hash_bootkey;
+        break;
+    case 3:
+        hash_function = &ntlmv2_hash_bootkey;
+        break;
+    default:
+        hash_function = NULL;
+    }
+
+    // Checking if read data is valid
+    if (hash_function == NULL)
+    {
+        cleanup_pointers(6, hive_header_ptr, base_nk_ptr, reg_accounts_path, accounts_nk_ptr, f_value_ptr, f_value);
+        return -13;
+    }
+
+    // Hashing bootkey
+    if ((*hash_function)(raw_bootkey, f_value, hashed_bootkey) != 0)
+    {
+        cleanup_pointers(6, hive_header_ptr, base_nk_ptr, reg_accounts_path, accounts_nk_ptr, f_value_ptr, f_value);
+        return -14;
+    }
+
+    cleanup_pointers(6, hive_header_ptr, base_nk_ptr, reg_accounts_path, accounts_nk_ptr, f_value_ptr, f_value);
     return 0;
 }
 
@@ -265,4 +297,67 @@ uint8_t* bootkey_from_u16(const wchar_t* wstr)
     }
 
     return bootkey_decoded;
+}
+
+// TODO(Implement a function)
+int ntlmv1_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* hashed_bootkey)
+{
+    return 0;
+}
+
+// TODO(Fix AES)
+int ntlmv2_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* hashed_bootkey)
+{
+    // Validating parameters
+    if (permutated_bootkey == NULL || hashed_bootkey == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Constructing a context for AES128 decryption
+    EVP_CIPHER_CTX* context = EVP_CIPHER_CTX_new();
+    if (context == NULL)
+    {
+        errno = EBADF;
+        return -2;
+    }
+
+    // Allocating space for IV taken from F[0x78:0x88] and encrypted bootkey taken from F[0x88:0xA8]
+    uint8_t* iv = malloc_check(iv, AES_BLOCK_SIZE, -3);
+    uint8_t* encrypted_bootkey = malloc_check(encrypted_bootkey, 32, -4);
+    memcpy(iv, f_value + 0x78, AES_BLOCK_SIZE);
+    memcpy(encrypted_bootkey, f_value + 0x88, 32);
+
+    // Initializing decryptor
+    if (!EVP_DecryptInit_ex(context, EVP_aes_128_cbc(), NULL, permutated_bootkey, iv))
+    {
+        EVP_CIPHER_CTX_cleanup(context);
+        EVP_CIPHER_CTX_free(context);
+        return -5;
+    }
+
+    EVP_CIPHER_CTX_set_padding(context, 0);
+
+    // Decrypting bootkey using permutated bootkey
+    int out_len;
+    if (!EVP_DecryptUpdate(context, hashed_bootkey, &out_len, encrypted_bootkey, 32))
+    {
+        EVP_CIPHER_CTX_cleanup(context);
+        EVP_CIPHER_CTX_free(context);
+        return -6;
+    }
+
+    // Writing final result
+    if (!EVP_DecryptFinal_ex(context, hashed_bootkey, &out_len))
+    {
+        EVP_CIPHER_CTX_cleanup(context);
+        EVP_CIPHER_CTX_free(context);
+        return -7;
+    }
+
+    // Deleting the context
+    EVP_CIPHER_CTX_cleanup(context);
+    EVP_CIPHER_CTX_free(context);
+    return 0;
 }

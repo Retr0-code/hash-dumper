@@ -13,7 +13,7 @@
 	This file defines functions for dumping NTLM hashes from SAM and SYSTEM
 */
 
-#include "hash_dump.h"
+#include "dump_hives.h"
 
 // Stores files' paths to hives
 static char* system_hive_filepath = NULL;

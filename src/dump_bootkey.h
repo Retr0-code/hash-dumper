@@ -29,9 +29,13 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include <openssl/aes.h>
+
 #include "hive.h"
 
 #define RAW_BOOTKEY_LENGTH 16
+
+typedef (*hash_bootkey_t)(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* hashed_bootkey);
 
 // Reads UTF-16 raw bootkey from system hive
 int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey);
@@ -41,5 +45,11 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hash
 
 // Converst bootkey wide char string to array of size 16 of one byte integers
 uint8_t* bootkey_from_u16(const wchar_t* wstr);
+
+// Generates NTLMv1 hashed bootkey
+static int ntlmv1_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* hashed_bootkey);
+
+// Generates NTLMv2 hashed bootkey
+static int ntlmv2_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* hashed_bootkey);
 
 #endif
