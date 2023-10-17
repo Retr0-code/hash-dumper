@@ -300,16 +300,57 @@ uint8_t* bootkey_from_u16(const wchar_t* wstr)
     return bootkey_decoded;
 }
 
-// TODO(Implement a function)
 int ntlmv1_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* hashed_bootkey)
 {
+    // Validating parameters
+    if (permutated_bootkey == NULL || f_value == NULL || hashed_bootkey == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Constants for hashed bootkey construction
+    const char* aqwerty = "!@#$%^&*()qwertyUIOPAzxcvbnmQQQQQQQQQQQQ)(*@&%\0";
+    const char* anum = "0123456789012345678901234567890123456789\0";
+
+    size_t total_length = strlen(aqwerty) + strlen(anum) + 0x20;
+    uint8_t* pre_hashed_bootkey = malloc_check(
+        pre_hashed_bootkey,
+        total_length,
+        -2
+    );
+
+    // Writing pre_hashed_bootkey in specific order
+    memcpy(pre_hashed_bootkey, f_value + 0x70, 0x10);
+    memcpy(pre_hashed_bootkey, aqwerty, strlen(aqwerty));
+    memcpy(pre_hashed_bootkey, permutated_bootkey, 0x10);
+    memcpy(pre_hashed_bootkey, anum + 0x70, strlen(anum));
+
+    // MD5 surves RC4 encryption key
+    uint8_t md5 = get_md5(pre_hashed_bootkey, total_length);
+    if (md5 == NULL)
+    {
+        free(pre_hashed_bootkey);
+        return -3;
+    }
+
+    // Encrypting bootkey using rc4
+    if (rc4_encrypt(f_value + 0x80, MD5_DIGEST_LENGTH, md5, hashed_bootkey) == 0)
+    {
+        free(pre_hashed_bootkey);
+        free(md5);
+        return -3;
+    }
+
+    free(pre_hashed_bootkey);
+    free(md5);
     return 0;
 }
 
 int ntlmv2_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* hashed_bootkey)
 {
     // Validating parameters
-    if (permutated_bootkey == NULL || hashed_bootkey == NULL)
+    if (permutated_bootkey == NULL || f_value == NULL || hashed_bootkey == NULL)
     {
         errno = EINVAL;
         return -1;
@@ -324,6 +365,9 @@ int ntlmv2_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* 
     // Decrypt bootkey
     if (aes_128_cbc_decrypt(encrypted_bootkey, NULL, 0x20, permutated_bootkey, iv, hashed_bootkey) == 0)
         return -2;
+
+    // Saving only first half of hashed bootkey
+    memset(hashed_bootkey + RAW_BOOTKEY_LENGTH, 0, RAW_BOOTKEY_LENGTH);
 
     return 0;
 }
