@@ -29,9 +29,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include <openssl/aes.h>
-
 #include "hive.h"
+#include "crypto.h"
+
 
 #define RAW_BOOTKEY_LENGTH 16
 

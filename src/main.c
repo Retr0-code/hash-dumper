@@ -46,12 +46,14 @@ int main(int argc, char const *argv[])
         }
     }
 
-    printf("%ls\n", boot_key_hex);
+    printf("bootkey: %ls\n", boot_key_hex);
 
-    uint8_t hashed_bootkey[32];
+    uint8_t hashed_bootkey[0x20];
+    memset(hashed_bootkey, 0, 0x20);
     get_hashed_bootkey(boot_key_hex, sam_hive, hashed_bootkey);
 
-    for (size_t i = 0; i < 32; i++)
+    puts("\nhashed bootkey:");
+    for (size_t i = 0; i < 0x20; i++)
         printf("%02x", hashed_bootkey[i]);
 
     close_hives(&system_hive, &sam_hive);

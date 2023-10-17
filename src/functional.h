@@ -23,8 +23,6 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include <openssl/evp.h>
-#include <openssl/md5.h>
 
 #if defined(__linux__) || defined(__unix__)
 
@@ -66,9 +64,6 @@ if (ptr_name == NULL) \
 
 // Deallocates pointers (if amount of pointers are odd then you have to pass aditional NULL)
 void cleanup_pointers(size_t amount, ...);
-
-// Returns md5 hash of specified data
-uint8_t* get_md5(const char* data, size_t data_size);
 
 // Generates random string of specified length
 char* get_random_string(size_t length);
