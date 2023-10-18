@@ -313,7 +313,7 @@ int ntlmv1_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* 
     const char* aqwerty = "!@#$%^&*()qwertyUIOPAzxcvbnmQQQQQQQQQQQQ)(*@&%\0";
     const char* anum = "0123456789012345678901234567890123456789\0";
 
-    size_t total_length = strlen(aqwerty) + strlen(anum) + 0x20;
+    size_t total_length = strlen(aqwerty) + strlen(anum) + 0x20 + 2;
     uint8_t* pre_hashed_bootkey = malloc_check(
         pre_hashed_bootkey,
         total_length,
@@ -322,28 +322,28 @@ int ntlmv1_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* 
 
     // Writing pre_hashed_bootkey in specific order
     memcpy(pre_hashed_bootkey, f_value + 0x70, 0x10);
-    memcpy(pre_hashed_bootkey, aqwerty, strlen(aqwerty));
+    memcpy(pre_hashed_bootkey, aqwerty, strlen(aqwerty) + 1);
     memcpy(pre_hashed_bootkey, permutated_bootkey, 0x10);
-    memcpy(pre_hashed_bootkey, anum + 0x70, strlen(anum));
+    memcpy(pre_hashed_bootkey, anum + 0x70, strlen(anum) + 1);
 
     // MD5 surves RC4 encryption key
-    uint8_t md5 = get_md5(pre_hashed_bootkey, total_length);
-    if (md5 == NULL)
+    uint8_t* md5_key = get_md5(pre_hashed_bootkey, total_length);
+    if (md5_key == NULL)
     {
         free(pre_hashed_bootkey);
         return -3;
     }
 
     // Encrypting bootkey using rc4
-    if (rc4_encrypt(f_value + 0x80, MD5_DIGEST_LENGTH, md5, hashed_bootkey) == 0)
+    if (rc4_encrypt(f_value + 0x80, MD5_DIGEST_LENGTH, md5_key, hashed_bootkey) == 0)
     {
         free(pre_hashed_bootkey);
-        free(md5);
+        free(md5_key);
         return -3;
     }
 
     free(pre_hashed_bootkey);
-    free(md5);
+    free(md5_key);
     return 0;
 }
 
@@ -363,7 +363,7 @@ int ntlmv2_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* 
     memcpy(encrypted_bootkey, f_value + 0x88, 0x20);
 
     // Decrypt bootkey
-    if (aes_128_cbc_decrypt(encrypted_bootkey, NULL, 0x20, permutated_bootkey, iv, hashed_bootkey) == 0)
+    if (aes_128_cbc_decrypt(encrypted_bootkey, 0x20, permutated_bootkey, iv, hashed_bootkey) == 0)
         return -2;
 
     // Saving only first half of hashed bootkey

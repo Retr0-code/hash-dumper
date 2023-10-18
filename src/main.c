@@ -50,7 +50,11 @@ int main(int argc, char const *argv[])
 
     uint8_t hashed_bootkey[0x20];
     memset(hashed_bootkey, 0, 0x20);
-    get_hashed_bootkey(boot_key_hex, sam_hive, hashed_bootkey);
+    {
+        int result = get_hashed_bootkey(boot_key_hex, sam_hive, hashed_bootkey);
+        if (result != 0)
+            printf("%i\n", result);
+    }
 
     puts("\nhashed bootkey:");
     for (size_t i = 0; i < 0x20; i++)
