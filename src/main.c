@@ -19,11 +19,53 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "arg_parser.h"
 #include "dump_hives.h"
 #include "dump_bootkey.h"
 
 int main(int argc, char const *argv[])
 {
+    arg_parser_t* arg_parser = malloc(sizeof(arg_parser_t));
+
+    {
+        int res = arg_parser_init(1, arg_parser);
+        if (res != arg_success)
+        {
+            printf("Error initializing parser: %i\n", res);
+            return -1;
+        }
+    }
+
+    if (arg_add(arg_init_arg(
+        arg_flag,
+        "--realtime",
+        "Available only on windows machines. Dumps hashes from registry in realtime.",
+        0), arg_parser) != arg_success)
+    {
+        puts("Unable to add argument <--realtime>");
+        return -1;
+    }
+
+    {
+        int res = arg_parse(argc, argv, arg_parser);
+        if (res != arg_success)
+        {
+            printf("Parsing error: %i\n", res);
+            arg_parser_delete(arg_parser);
+            return -1;
+        }
+    }
+
+    if (arg_get("--realtime", arg_parser) == NULL)
+    {
+        puts("No argument");
+        arg_parser_delete(arg_parser);
+        return -1;
+    }
+
+    arg_parser_delete(arg_parser);
+    exit(0);
+
 #ifdef __linux__
     set_paths("hives/system.dump", "hives/sam.dump");
 #elif defined(_WIN32) || defined(_WIN64)
@@ -32,7 +74,11 @@ int main(int argc, char const *argv[])
 
     FILE* system_hive = NULL;
     FILE* sam_hive = NULL;
-    open_hives(&system_hive, &sam_hive);
+    if (open_hives(&system_hive, &sam_hive))
+    {
+        puts("Unable to open hives files");
+        return -1;
+    }
 
     wchar_t* boot_key_hex[33];
     {

@@ -228,7 +228,7 @@ typedef PACK(struct reg_path_t
 /*
 Defines error statuses for hive API
 */
-typedef enum hive_error
+enum hive_error
 {
 	hv_success,
 	hv_invalid_arg,

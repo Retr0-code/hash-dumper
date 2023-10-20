@@ -9,16 +9,12 @@ project(hash-dumper
 set(EXEC_SRC
     src/main.c
     src/hive.c
-    src/hash_dump.c
+    src/crypto.c
+    src/dump_hives.c
     src/functional.c
+    src/arg_parser.c
     src/dump_bootkey.c
-    )
-
-set(EXEC_HEAD
-    src/hive.h
-    src/hash_dump.h
-    src/functional.h
-    src/dump_bootkey.h
+    src/string-hashtable/hash_table.c
     )
 
 set(OPENSSL_USE_STATIC_LIBS TRUE)
