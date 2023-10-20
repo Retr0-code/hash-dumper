@@ -23,60 +23,100 @@
 #include "dump_hives.h"
 #include "dump_bootkey.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+#define IS_WINDOWS 1
+#else
+#define IS_WINDOWS 0
+#endif
 int main(int argc, char const *argv[])
 {
     arg_parser_t* arg_parser = malloc(sizeof(arg_parser_t));
 
     {
-        int res = arg_parser_init(1, arg_parser);
+        // Initializing arguments parser
+        // To avoid auto resize allocating one more cell
+        int res = arg_parser_init(5, "", arg_parser);
         if (res != arg_success)
         {
-            printf("Error initializing parser: %i\n", res);
+            printf("[-] Error initializing argument parser: 0x%08x\n", res);
             return -1;
         }
     }
 
-    if (arg_add(arg_init_arg(
-        arg_flag,
-        "--realtime",
-        "Available only on windows machines. Dumps hashes from registry in realtime.",
-        0), arg_parser) != arg_success)
+    // Adding arguments
+    if (arg_add_amount(4, arg_parser,
+        arg_init_arg(
+            arg_flag,
+            "--help",
+            "Shows help message.",
+            0),
+        arg_init_arg(
+            arg_flag,
+            "--realtime",
+            "Available only on windows machines. Dumps hashes from registry in realtime.",
+            0),
+        arg_init_arg(
+            arg_parameter,
+            "--sam",
+            "Specifies SAM hive dump file.",
+            NULL),
+        arg_init_arg(
+            arg_parameter,
+            "--system",
+            "Specifies SYSTEM hive dump file.",
+            NULL)
+    ) != arg_success)
     {
-        puts("Unable to add argument <--realtime>");
+        puts("[-] Unable to add arguments");
+        arg_parser_delete(arg_parser);
         return -1;
     }
 
     {
+        // Parsing arguments of main
         int res = arg_parse(argc, argv, arg_parser);
         if (res != arg_success)
         {
-            printf("Parsing error: %i\n", res);
+            printf("[-] Parsing error: 0x%08x\n", res);
             arg_parser_delete(arg_parser);
             return -1;
         }
     }
 
-    if (arg_get("--realtime", arg_parser) == NULL)
+    // Processing given arguments
+
+    if (arg_get("--help", arg_parser)->value)
     {
-        puts("No argument");
+        arg_show_help(arg_parser);
         arg_parser_delete(arg_parser);
-        return -1;
+        return 0;
     }
 
-    arg_parser_delete(arg_parser);
-    exit(0);
+    argument_t* realtime_arg = arg_get("--realtime", arg_parser);
+    int realtime_flag_count = 0;
 
-#ifdef __linux__
-    set_paths("hives/system.dump", "hives/sam.dump");
-#elif defined(_WIN32) || defined(_WIN64)
-    resolve_temp_paths();
-#endif
+    if (realtime_arg != NULL && IS_WINDOWS)
+        realtime_flag_count = realtime_arg->value;
+    
+    if (realtime_flag_count)
+    {
+        int res = resolve_temp_paths();
+        if (res != 0)
+            printf("[-] Unable to save temp hives files 0x08%x\n", res);
+    }
+
+    argument_t* sam_arg = arg_get("--sam", arg_parser);
+    argument_t* system_arg = arg_get("--system", arg_parser);
+    if (realtime_flag_count == 0 && sam_arg != NULL && system_arg != NULL)
+        set_paths(system_arg->value, sam_arg->value);
+
+    arg_parser_delete(arg_parser);
 
     FILE* system_hive = NULL;
     FILE* sam_hive = NULL;
     if (open_hives(&system_hive, &sam_hive))
     {
-        puts("Unable to open hives files");
+        puts("Unable to open hives files. Check if hives specified properly");
         return -1;
     }
 

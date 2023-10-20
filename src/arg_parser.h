@@ -16,6 +16,7 @@
 #ifndef ARG_PARSER_H
 #define ARG_PARSER_H
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "functional.h"
@@ -31,10 +32,11 @@ enum arg_errors
     arg_unknown
 };
 
+// Defines types of arguments
 typedef enum
 {
-    arg_flag,
-    arg_parameter,
+    arg_flag,       // Stores as value count of arguments 
+    arg_parameter,  // Stores next argument as a value
 } arg_type;
 
 typedef struct
@@ -53,7 +55,7 @@ typedef struct
 } arg_parser_t;
 
 // Constructs an argument parser with total amount of arguments
-int arg_parser_init(size_t args_amount, arg_parser_t* parser_ptr);
+int arg_parser_init(size_t args_amount, const char* prog_info, arg_parser_t* parser_ptr);
 
 // Deletes the arguments parser
 int arg_parser_delete(arg_parser_t* parser_ptr);
@@ -72,6 +74,9 @@ argument_t* arg_get(const char* key, arg_parser_t* parser_ptr);
 
 // Parses arguments given to main function
 int arg_parse(int argc, const char** argv, arg_parser_t* parser_ptr);
+
+// Shows help message/manual
+void arg_show_help(arg_parser_t* parser_ptr);
 
 // Deletes argument pointer
 int arg_delete(argument_t* arg);

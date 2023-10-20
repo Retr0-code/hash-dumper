@@ -36,59 +36,18 @@ uint8_t* get_md5(const char* data, size_t data_size)
 
 int rc4_encrypt(const uint8_t* data, size_t data_len, uint8_t* key, uint8_t* enc_data)
 {
-	// Constructing a context for RC4 decryption
-	//EVP_CIPHER_CTX* context = EVP_CIPHER_CTX_new();
-	//if (context == NULL)
-	//{
-	//	errno = EBADF;
-	//	return 0;
-	//}
-
+	// Loading legacy algorithms provider
 	OSSL_PROVIDER* legacy = OSSL_PROVIDER_load(NULL, "legacy");
 	if (legacy == NULL) {
 		ERR_print_errors_fp(stderr);
-		//EVP_CIPHER_CTX_cleanup(context);
-		//EVP_CIPHER_CTX_free(context);
 		return 1;
 	}
 
 	int result = openssl_evp_wrapper(data, data_len, key, NULL, enc_data, 1, EVP_rc4());
 
+	// Unloading legacy provider
 	OSSL_PROVIDER_unload(legacy);
 	return result;
-	/*
-	// Initializing decryptor
-	if (!EVP_EncryptInit_ex(context, EVP_rc4(), NULL, key, NULL))
-	{
-		ERR_print_errors_fp(stderr);
-		EVP_CIPHER_CTX_cleanup(context);
-		EVP_CIPHER_CTX_free(context);
-		return 0;
-	}
-
-	int out_len;
-	if (!EVP_EncryptUpdate(context, enc_data, &out_len, data, data_len))
-	{
-		ERR_print_errors_fp(stderr);
-		EVP_CIPHER_CTX_cleanup(context);
-		EVP_CIPHER_CTX_free(context);
-		return 0;
-	}
-
-	// Writing final result
-	if (!EVP_EncryptFinal_ex(context, enc_data, &out_len))
-	{
-		ERR_print_errors_fp(stderr);
-		EVP_CIPHER_CTX_cleanup(context);
-		EVP_CIPHER_CTX_free(context);
-		return 0;
-	}
-
-	// Deleting the context
-	EVP_CIPHER_CTX_cleanup(context);
-	EVP_CIPHER_CTX_free(context);
-	return data_len;
-	*/
 }
 
 int aes_128_cbc_decrypt(
@@ -100,47 +59,6 @@ int aes_128_cbc_decrypt(
 )
 {
 	return openssl_evp_wrapper(enc_data, data_len, key, iv, dec_data, 0, EVP_aes_128_cbc());
-	/*
-	// Constructing a context for AES128 decryption
-	EVP_CIPHER_CTX* context = EVP_CIPHER_CTX_new();
-	if (context == NULL)
-	{
-		errno = EBADF;
-		return 0;
-	}
-
-	// Initializing decryptor
-	if (!EVP_DecryptInit_ex(context, EVP_aes_128_cbc(), NULL, key, iv))
-	{
-		EVP_CIPHER_CTX_cleanup(context);
-		EVP_CIPHER_CTX_free(context);
-		return 0;
-	}
-
-	EVP_CIPHER_CTX_set_padding(context, 0);
-
-	// Decrypting using specified parameters
-	int out_len;
-	if (!EVP_DecryptUpdate(context, dec_data, &out_len, enc_data, data_len))
-	{
-		EVP_CIPHER_CTX_cleanup(context);
-		EVP_CIPHER_CTX_free(context);
-		return 0;
-	}
-
-	// Writing final result
-	if (!EVP_DecryptFinal_ex(context, dec_data, &out_len))
-	{
-		EVP_CIPHER_CTX_cleanup(context);
-		EVP_CIPHER_CTX_free(context);
-		return 0;
-	}
-
-	// Deleting the context
-	EVP_CIPHER_CTX_cleanup(context);
-	EVP_CIPHER_CTX_free(context);
-	return data_len;
-	*/
 }
 
 static int openssl_evp_wrapper(
