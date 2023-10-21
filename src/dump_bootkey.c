@@ -181,7 +181,7 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hash
         return -6;
     }
 
-    reg_path_t* reg_accounts_path = reg_make_path(3, "SAM", "Domains", "Accounts");
+    reg_path_t* reg_accounts_path = reg_make_path(3, "SAM", "Domains", "Account");
 
     if (reg_accounts_path == NULL)
     {
