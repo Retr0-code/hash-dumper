@@ -41,7 +41,7 @@ int resolve_temp_paths();
 int open_hives(FILE** system_hive, FILE** sam_hive);
 
 // Deletes files and closes handles
-void close_hives(FILE** system_hive, FILE** sam_hive);
+void close_hives(FILE** system_hive, FILE** sam_hive, int delete_hives);
 
 // Saves registry hive
 static int reg_save_key(const char* key_name, const char* save_to);

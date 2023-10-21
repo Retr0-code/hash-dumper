@@ -140,9 +140,15 @@ typedef PACK(struct named_key_t
 	uint32_t value_offset;		// Offset to nearest value key
 	uint32_t security_offset;	// Offset to security key record
 	uint32_t class_name_offset;	// Offset of nodes class name
-	uint64_t giant_padding[2];	// Unknown random padding
-	int32_t class_length;		// Length of node class name
-	int32_t name_length;		// Length of node name
+
+	uint32_t sub_max_namelen;	// The largest name of subkey
+	uint32_t sub_max_classlen;	// The largest class name of subkey
+	uint32_t val_max_namelen;	// The largest name of value key
+	uint32_t val_max_datalen;	// The largest data of value key
+	uint32_t padding4;
+	
+	int16_t class_length;		// Length of node class name
+	int16_t name_length;		// Length of node name
 	char* name;					// Name of a key
 }) named_key_t;
 

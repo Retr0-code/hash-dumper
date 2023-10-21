@@ -28,6 +28,9 @@
 #else
 #define IS_WINDOWS 0
 #endif
+
+static int delete_hives = 0;
+
 int main(int argc, char const *argv[])
 {
     arg_parser_t* arg_parser = malloc(sizeof(arg_parser_t));
@@ -78,13 +81,15 @@ int main(int argc, char const *argv[])
         if (res != arg_success)
         {
             printf("[-] Parsing error: 0x%08x\n", res);
+            if (res == arg_unknown)
+                puts("Unknown arguments were given.");
+
             arg_parser_delete(arg_parser);
             return -1;
         }
     }
 
     // Processing given arguments
-
     if (arg_get("--help", arg_parser)->value)
     {
         arg_show_help(arg_parser);
@@ -100,9 +105,14 @@ int main(int argc, char const *argv[])
     
     if (realtime_flag_count)
     {
+        delete_hives = 1;
         int res = resolve_temp_paths();
         if (res != 0)
+        {
             printf("[-] Unable to save temp hives files 0x08%x\n", res);
+            arg_parser_delete(arg_parser);
+            return -1;
+        }
     }
 
     argument_t* sam_arg = arg_get("--sam", arg_parser);
@@ -116,7 +126,7 @@ int main(int argc, char const *argv[])
     FILE* sam_hive = NULL;
     if (open_hives(&system_hive, &sam_hive))
     {
-        puts("Unable to open hives files. Check if hives specified properly");
+        puts("[-] Unable to open hives files. Check if hives specified properly");
         return -1;
     }
 
@@ -146,7 +156,7 @@ int main(int argc, char const *argv[])
     for (size_t i = 0; i < 0x20; i++)
         printf("%02x", hashed_bootkey[i]);
 
-    close_hives(&system_hive, &sam_hive);
+    close_hives(&system_hive, &sam_hive, delete_hives);
 
     return 0;
 }

@@ -146,8 +146,16 @@ int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable)
 
 void set_paths(const char* sys_hive_path, const char* sam_hive_path)
 {
-	system_hive_filepath = sys_hive_path;
-	sam_hive_filepath = sam_hive_path;
+	if (system_hive_filepath == NULL)
+		system_hive_filepath = malloc(strlen(sys_hive_path));
+
+	if (sam_hive_filepath == NULL)
+		sam_hive_filepath = malloc(strlen(sam_hive_path));
+
+	strcpy(system_hive_filepath, sys_hive_path);
+	strcpy(sam_hive_filepath, sam_hive_path);
+	// system_hive_filepath = sys_hive_path;
+	// sam_hive_filepath = sam_hive_path;
 }
 
 int open_hives(FILE** system_hive, FILE** sam_hive)
@@ -166,12 +174,16 @@ int open_hives(FILE** system_hive, FILE** sam_hive)
 	return 0;
 }
 
-void close_hives(FILE** system_hive, FILE** sam_hive)
+void close_hives(FILE** system_hive, FILE** sam_hive, int delete_hives)
 {
 	fclose(*system_hive);
 	fclose(*sam_hive);
 
-	remove(system_hive_filepath);
-	remove(sam_hive_filepath);
+	if (delete_hives)
+	{
+		remove(system_hive_filepath);
+		remove(sam_hive_filepath);
+	}
+
 	return 0;
 }
