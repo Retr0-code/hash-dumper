@@ -447,7 +447,7 @@ wchar_t* reg_get_class(named_key_t* nk_ptr, FILE* hive_ptr)
 		return NULL;
 
 	// Reading length
-	if (fread(&nk_ptr->class_length, sizeof(nk_ptr->class_length), 1, hive_ptr) != 1)
+	if (fread(&nk_ptr->class_length, sizeof(uint32_t), 1, hive_ptr) != 1)
 		return NULL;
 
 	if (nk_ptr->class_length >= 0)

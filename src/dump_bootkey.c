@@ -110,8 +110,6 @@ int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey)
             return -10;
         }
 
-        printf("%i : %s\n", endpoint_nk_ptr->name_length, endpoint_nk_ptr->name);
-
         // Reading hex UTF-16 bootkey part from class names of specified named keys
         bootkey_part = reg_get_class(endpoint_nk_ptr, sys_hive);
         if (bootkey_part == NULL)

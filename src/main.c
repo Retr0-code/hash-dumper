@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
 
 #include "arg_parser.h"
 #include "dump_hives.h"
@@ -33,6 +34,8 @@ static int delete_hives = 0;
 
 int main(int argc, char const *argv[])
 {
+    setlocale(LC_ALL, "");
+
     arg_parser_t* arg_parser = malloc(sizeof(arg_parser_t));
 
     {
@@ -103,6 +106,9 @@ int main(int argc, char const *argv[])
     if (realtime_arg != NULL && IS_WINDOWS)
         realtime_flag_count = realtime_arg->value;
     
+
+    argument_t* sam_arg = arg_get("--sam", arg_parser);
+    argument_t* system_arg = arg_get("--system", arg_parser);
     if (realtime_flag_count)
     {
         delete_hives = 1;
@@ -114,11 +120,14 @@ int main(int argc, char const *argv[])
             return -1;
         }
     }
-
-    argument_t* sam_arg = arg_get("--sam", arg_parser);
-    argument_t* system_arg = arg_get("--system", arg_parser);
-    if (realtime_flag_count == 0 && sam_arg != NULL && system_arg != NULL)
+    else if (realtime_flag_count == 0 && sam_arg->value != NULL && system_arg->value != NULL)
         set_paths(system_arg->value, sam_arg->value);
+    else
+    {
+        arg_show_help(arg_parser);
+        arg_parser_delete(arg_parser);
+        return 0;
+    }
 
     arg_parser_delete(arg_parser);
 
@@ -130,12 +139,12 @@ int main(int argc, char const *argv[])
         return -1;
     }
 
-    wchar_t* boot_key_hex[33];
+    wchar_t boot_key_hex[33];
     {
         int result = dump_bootkey(system_hive, boot_key_hex);
         if (result != 0)
         {
-            printf("Unable to read bootkey: %i\n", result);
+            printf("[-] Unable to read bootkey: 0x%08x\n", result);
             fclose(system_hive);
             free(boot_key_hex);
             return -1;
