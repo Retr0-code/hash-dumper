@@ -250,6 +250,9 @@ int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr);
 // Read named key from hive
 int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_ptr);
 
+// Read fast/hash leaf
+int read_subkey_list(const uint32_t root_offset, FILE* hive_ptr, fast_leaf_t* lf_ptr);
+
 // Read value key list from hive
 int read_vk_list(const uint32_t root_offset, FILE* hive_ptr, value_list_t* vk_list_ptr);
 
@@ -272,10 +275,13 @@ void* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr);
 wchar_t* reg_get_class(named_key_t* nk_ptr, FILE* hive_ptr);
 
 // Sets file cursor from beggining to 0x1000 + root_offset
-static inline int hive_file_seek(FILE* hive_ptr, const uint32_t root_offset);
+inline int hive_file_seek(FILE* hive_ptr, const uint32_t root_offset);
 
 // Reads structure from given give
-static inline size_t hive_read_struct(FILE* hive_ptr, void* hive_struct, size_t read_size);
+inline size_t hive_read_struct(FILE* hive_ptr, void* hive_struct, size_t read_size);
+
+// Reads root named key and header of a hive
+int hive_get_root(FILE* hive_ptr, hive_header_t* hive_header_ptr, named_key_t* root_key_ptr);
 
 // Constructs hash for hash_leaf, returns 0 on error
 uint32_t get_name_hash(const char* leaf_name);

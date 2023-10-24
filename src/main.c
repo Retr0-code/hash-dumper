@@ -22,6 +22,7 @@
 
 #include "arg_parser.h"
 #include "dump_hives.h"
+#include "dump_hashes.h"
 #include "dump_bootkey.h"
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -29,8 +30,6 @@
 #else
 #define IS_WINDOWS 0
 #endif
-
-static int delete_hives = 0;
 
 int main(int argc, char const *argv[])
 {
@@ -106,7 +105,7 @@ int main(int argc, char const *argv[])
     if (realtime_arg != NULL && IS_WINDOWS)
         realtime_flag_count = realtime_arg->value;
     
-
+    int delete_hives = 0;
     argument_t* sam_arg = arg_get("--sam", arg_parser);
     argument_t* system_arg = arg_get("--system", arg_parser);
     if (realtime_flag_count)
@@ -165,7 +164,14 @@ int main(int argc, char const *argv[])
     for (size_t i = 0; i < 0x20; i++)
         printf("%02x", hashed_bootkey[i]);
 
-    close_hives(&system_hive, &sam_hive, delete_hives);
+    named_key_t** users_keys_list = NULL;
+    size_t users_amount = 0;
+    {
+        int res = dump_users_keys(sam_hive, users_keys_list, &users_amount);
+        if (res != 0)
+            printf("[-] Error retrieving users keys: 0x%08x\n", res);
+    }
 
+    close_hives(&system_hive, &sam_hive, delete_hives);
     return 0;
 }

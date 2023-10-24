@@ -102,6 +102,55 @@ int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_p
 	return hv_success;
 }
 
+int read_subkey_list(const uint32_t root_offset, FILE* hive_ptr, fast_leaf_t* lf_ptr)
+{
+	if (root_offset == 0 || hive_ptr == NULL || lf_ptr == NULL)
+	{
+		errno = EINVAL;
+		return hv_invalid_arg;
+	}
+
+	// Setting cursor by offset parameter
+	if (hive_file_seek(hive_ptr, root_offset) != 0)
+		return hv_seek_error;
+
+	// Reading fast/hash leaf (offsets list)
+	if (hive_read_struct(hive_ptr, lf_ptr, sizeof(fast_leaf_t) - sizeof(lf_ptr->elements)) != 1)
+		return hv_read_error;
+
+	// Validation of a signature
+	if (lf_ptr->signature != LF_SIGN && lf_ptr->signature != LH_SIGN)
+	{
+		errno = EBADF;
+		return hv_invalid_signature;
+	}
+
+	// Checking if elements are existing
+	if (lf_ptr->elements_amount == 0)
+		return hv_inactive_cell;
+
+	// If size less then 0 it means that node is in use, otherwise it's not
+	if (lf_ptr->size >= 0)
+	{
+		errno = EBADF;
+		return hv_inactive_cell;
+	}
+
+	lf_ptr->size = 0 - lf_ptr->size;
+
+	// Allocating space for fast leaf elements
+	lf_ptr->elements = malloc_check(lf_ptr->elements, lf_ptr->elements_amount * sizeof(lf_element_t), hv_alloc_error);
+
+	// Reading elements to array
+	if (fread(lf_ptr->elements, lf_ptr->elements_amount * sizeof(lf_element_t), 1, hive_ptr) != 1)
+	{
+		free(lf_ptr->elements);
+		return hv_read_error;
+	}
+
+	return hv_success;
+}
+
 int read_vk_list(const uint32_t root_offset, FILE* hive_ptr, value_list_t* vk_list_ptr)
 {
 	// Validating parameters
@@ -266,44 +315,10 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 	else
 		out_nk_ptr->name = NULL;	// Because we do not need a name, when node is not requiered
 
-	// Setting cursor by offset parameter
-	if (hive_file_seek(hive_ptr, base_nk_ptr->subkey_offset) != 0)
-		return hv_seek_error;
-
 	// Reading fast leaf (offsets list)
 	fast_leaf_t sub_keys;
-	if (hive_read_struct(hive_ptr, &sub_keys, sizeof(fast_leaf_t) - sizeof(sub_keys.elements)) != 1)
+	if (read_subkey_list(base_nk_ptr->subkey_offset, hive_ptr, &sub_keys) != hv_success)
 		return hv_read_error;
-
-	// Validation of a signature
-	if (sub_keys.signature != LF_SIGN && sub_keys.signature != LH_SIGN)
-	{
-		errno = EBADF;
-		return hv_invalid_signature;
-	}
-
-	// Checking if elements are existing
-	if (sub_keys.elements_amount == 0)
-		return hv_inactive_cell;
-
-	// If size less then 0 it means that node is in use, otherwise it's not
-	if (sub_keys.size >= 0)
-	{
-		errno = EBADF;
-		return hv_inactive_cell;
-	}
-
-	sub_keys.size = 0 - sub_keys.size;
-
-	// Allocating space for fast leaf elements
-	sub_keys.elements = malloc_check(sub_keys.elements, sub_keys.elements_amount * sizeof(lf_element_t), hv_alloc_error);
-
-	// Reading elements to array
-	if (fread(sub_keys.elements, sub_keys.elements_amount * sizeof(lf_element_t), 1, hive_ptr) != 1)
-	{
-		free(sub_keys.elements);
-		return hv_read_error;
-	}
 
 	uint32_t* hints = reg_path_ptr->nodes_hints;
 	if (sub_keys.signature == LH_SIGN)
@@ -479,6 +494,26 @@ inline int hive_file_seek(FILE* hive_ptr, const uint32_t root_offset)
 inline size_t hive_read_struct(FILE* hive_ptr, void* hive_struct, size_t read_size)
 {
 	return fread(hive_struct, read_size, 1, hive_ptr);
+}
+
+int hive_get_root(FILE* hive_ptr, hive_header_t* hive_header_ptr, named_key_t* root_key_ptr)
+{
+	// Validating parameters
+	if (hive_ptr == NULL || hive_header_ptr == NULL || root_key_ptr == NULL)
+	{
+		errno = EINVAL;
+		return hv_invalid_arg;
+	}
+
+	// Reading header structure
+	if (read_hive_header(hive_ptr, hive_header_ptr) != 0)
+		return hv_no_entity;
+
+	// Reading named key structure
+	if (read_named_key(hive_header_ptr->root_offset, hive_ptr, root_key_ptr) != 0)
+		return hv_read_error;
+
+	return hv_success;
 }
 
 uint32_t get_name_hash(const char* leaf_name)
