@@ -8,8 +8,21 @@
 #include "crypto.h"
 
 
+typedef struct
+{
+	uint16_t user_id;
+	size_t v_size;
+	void* v_value;
+	char* username;
+	uint8_t nthash[16];
+	uint8_t lmhash[16];
+} reg_user_t;
+
 // Reads users named keys from SAM hive. Writes array to users_keys and size of the array to users_amount
 int dump_users_keys(FILE* sam_hive, named_key_t** users_keys_array, size_t* users_amount);
+
+// Dumps V value of specified user's key
+int dump_v_value(FILE* sam_hive, named_key_t* user_key_ptr, reg_user_t* user_info_ptr);
 
 
 #endif

@@ -144,7 +144,7 @@ int main(int argc, char const *argv[])
         if (result != 0)
         {
             printf("[-] Unable to read bootkey: 0x%08x\n", result);
-            fclose(system_hive);
+            close_hives(&system_hive, &sam_hive, delete_hives);
             free(boot_key_hex);
             return -1;
         }
@@ -157,19 +157,27 @@ int main(int argc, char const *argv[])
     {
         int result = get_hashed_bootkey(boot_key_hex, sam_hive, hashed_bootkey);
         if (result != 0)
+        {
             printf("%i\n", result);
+            close_hives(&system_hive, &sam_hive, delete_hives);
+            return -1;
+        }
     }
 
     puts("\nhashed bootkey:");
     for (size_t i = 0; i < 0x20; i++)
         printf("%02x", hashed_bootkey[i]);
 
-    named_key_t** users_keys_list = NULL;
+    named_key_t* users_keys_list = NULL;
     size_t users_amount = 0;
     {
-        int res = dump_users_keys(sam_hive, users_keys_list, &users_amount);
+        int res = dump_users_keys(sam_hive, &users_keys_list, &users_amount);
         if (res != 0)
+        {
             printf("[-] Error retrieving users keys: 0x%08x\n", res);
+            close_hives(&system_hive, &sam_hive, delete_hives);
+            return -1;
+        }
     }
 
     close_hives(&system_hive, &sam_hive, delete_hives);
