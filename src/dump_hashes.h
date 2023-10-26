@@ -7,6 +7,10 @@
 #include "hive.h"
 #include "crypto.h"
 
+#define EMPTY_NT_HASH	"\xaa\xd3\xb4\x35\xb5\x14\x04\xee\xaa\xd3\xb4\x35\xb5\x14\x04\xee"
+#define EMPTY_LM_HASH	"\x31\xd6\xcf\xe0\xd1\x6a\xe9\x31\xb7\x3c\x59\xd7\xe0\xc0\x89\xc0"
+#define NTPASSWORD		"NTPASSWORD"
+#define LMPASSWORD		"LMPASSWORD"
 
 typedef struct
 {
@@ -14,9 +18,15 @@ typedef struct
 	size_t v_size;
 	void* v_value;
 	wchar_t* name;
-	uint8_t nthash[16];
-	uint8_t lmhash[16];
+	uint8_t* nthash;
+	uint8_t* lmhash;
 } reg_user_t;
+
+typedef enum
+{
+	hash_lm,
+	hash_nt
+} hash_type_e;
 
 // Reads users named keys from SAM hive. Writes array to users_keys and size of the array to users_amount
 int dump_users_keys(FILE* sam_hive, named_key_t** users_keys_array, size_t* users_amount);
@@ -26,5 +36,11 @@ int dump_v_value(FILE* sam_hive, named_key_t* user_key_ptr, reg_user_t* user_inf
 
 // Writes ASCII name to user_info_ptr->name
 int dump_user_name(reg_user_t* user_info_ptr);
+
+// Dumps users NT and LM hashes to struct
+int dump_user_ntlm(reg_user_t* user_info_ptr, const uint8_t* hashed_bootkey);
+
+// Decrypts NT/LM hash
+int decrypt_ntlm_hash(reg_user_t* user_info_ptr, const uint8_t* hashed_bootkey, hash_type_e hash_type);
 
 #endif

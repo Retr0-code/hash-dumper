@@ -45,26 +45,3 @@ char* get_random_string(size_t length)
 	str[length] = '\0';
 	return str;
 }
-
-uint32_t hex_to_u32(const char* hex_str)
-{
-	if (hex_str == NULL)
-	{
-		errno = EINVAL;
-		return -1;
-	}
-
-	uint32_t result = 0;
-	size_t length = strlen(hex_str);
-	for (size_t i = 0; i < length; i++)
-	{
-		char c = toupper(hex_str[i]);
-		if (c > 'F' || (c < 'A' && c > '9') || c < '0')
-			return 0;
-
-		if (c != '0')
-			result |= (c - (c >= 'A' ? 0x37 : 0x30)) << (4 * (length - i - 1));
-	}
-
-	return result;
-}

@@ -122,7 +122,7 @@ int dump_v_value(FILE* sam_hive, named_key_t* user_key_ptr, reg_user_t* user_inf
         return -4;
     }
 
-    user_info_ptr->rid = hex_to_u32(user_key_ptr->name);
+    user_info_ptr->rid = strtoul(user_key_ptr->name, NULL, 16);
     user_info_ptr->v_value = v_value_ptr;
     user_info_ptr->v_size = v_key_ptr->data_size;
 
@@ -148,6 +148,92 @@ int dump_user_name(reg_user_t* user_info_ptr)
     user_info_ptr->name = malloc_check(user_info_ptr->name, name_length + 2, -2);
     memcpy(user_info_ptr->name, (const char*)user_info_ptr->v_value + name_offset, name_length);
     user_info_ptr->name[name_length >> 1] = L'\0';
+
+    return 0;
+}
+
+int dump_user_ntlm(reg_user_t* user_info_ptr, const uint8_t* hashed_bootkey)
+{
+    // Validating parameters
+    if (user_info_ptr == NULL || hashed_bootkey == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int result = decrypt_ntlm_hash(user_info_ptr, hashed_bootkey, hash_lm);
+    if (result != 0)
+        return -2;
+
+    result = decrypt_ntlm_hash(user_info_ptr, hashed_bootkey, hash_nt);
+    if (result != 0)
+        return -3;
+
+    return 0;
+}
+
+int decrypt_ntlm_hash(reg_user_t* user_info_ptr, const uint8_t* hashed_bootkey, hash_type_e hash_type)
+{
+    // Validating parameters
+    if (user_info_ptr == NULL || hashed_bootkey == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Retrieving hash offset from V value
+    uint32_t hash_offset = 0;
+    memcpy(&hash_offset, (const char*)user_info_ptr->v_value + 0xA8 + (0x18 * hash_type), sizeof(uint32_t));
+    hash_offset += 0xCC;
+
+    uint32_t hash_exists = 0;
+    memcpy(&hash_exists, (const char*)user_info_ptr->v_value + 0xA0 + (0x0C * hash_type), sizeof(uint32_t));
+
+    // Retrieving hash revision from V value. Specific condition for LM hash
+    uint8_t revision = *((uint8_t*)user_info_ptr->v_value + hash_offset + 2);
+    if (hash_type == hash_lm)
+    {
+        uint32_t revision_offset = 0;
+        memcpy(&revision_offset, (const char*)user_info_ptr->v_value + 0x9C, sizeof(uint32_t));
+        revision = *((uint8_t*)user_info_ptr->v_value + revision_offset + 0xCC + 2);
+    }
+
+    // Preparing arrays for encrypted hash and salt
+    uint8_t encrypted_hash[32];
+    uint8_t encrypted_hash_salt[16];
+    memset(encrypted_hash, 0, 32);
+    memset(encrypted_hash_salt, 0, 16);
+
+    // Setting proper pointer to hash
+    uint8_t* hash_pointer = hash_nt ? user_info_ptr->nthash : user_info_ptr->lmhash;
+    switch (revision)
+    {
+    case 1:
+        if (hash_exists != 0x14)
+        {
+            hash_pointer = hash_nt ? EMPTY_NT_HASH : EMPTY_LM_HASH;
+            return 0;
+        }
+
+        memcpy(encrypted_hash, ((uint8_t*)user_info_ptr->v_value) + hash_offset + 4, 16);
+        // Decrypt NTLMv1 Hash (without a salt)
+        break;
+    case 2:
+        if (hash_exists != 0x38)
+        {
+            hash_pointer = hash_nt ? EMPTY_NT_HASH : EMPTY_LM_HASH;
+            return 0;
+        }
+
+        // Reading salt and encrypted hash (offset +4 if hash type is NT)
+        memcpy(encrypted_hash_salt, ((uint8_t*)user_info_ptr->v_value) + hash_offset + 4 + (hash_type * 4), 16);
+        memcpy(encrypted_hash, ((uint8_t*)user_info_ptr->v_value) + hash_offset + 20 + (hash_type * 4), 32);
+        // Decrypt NTLMv2 Hash (with a salt)
+        break;
+
+    default:
+        return -2;
+    }
 
     return 0;
 }

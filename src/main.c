@@ -202,7 +202,10 @@ int main(int argc, char const *argv[])
             printf("[-] Error reading user name from V: 0x%08x\n", res);
             return -1;
         }
+
+        dump_user_ntlm(&user, hashed_bootkey);
         wprintf(L"%ls:%04x:nthash:lmhash:::\n", user.name, user.rid);
+        free(user.v_value);
     }
 
     close_hives(&system_hive, &sam_hive, delete_hives);
