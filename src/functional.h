@@ -68,4 +68,7 @@ void cleanup_pointers(size_t amount, ...);
 // Generates random string of specified length
 char* get_random_string(size_t length);
 
+// Converts HEX string to uint32
+uint32_t hex_to_u32(const char* hex_str);
+
 #endif

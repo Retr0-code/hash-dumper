@@ -150,7 +150,7 @@ int main(int argc, char const *argv[])
         }
     }
 
-    printf("bootkey: %ls\n", boot_key_hex);
+    printf("[+] Successfully dumped bootkey: %ls\n", boot_key_hex);
 
     uint8_t hashed_bootkey[0x20];
     memset(hashed_bootkey, 0, 0x20);
@@ -164,9 +164,11 @@ int main(int argc, char const *argv[])
         }
     }
 
-    puts("\nhashed bootkey:");
-    for (size_t i = 0; i < 0x20; i++)
+    printf("[+] Successfully hashed the bootkey: ");
+    for (size_t i = 0; i < 0x10; i++)
         printf("%02x", hashed_bootkey[i]);
+
+    puts("\n");
 
     named_key_t* users_keys_list = NULL;
     size_t users_amount = 0;
@@ -180,6 +182,30 @@ int main(int argc, char const *argv[])
         }
     }
 
+    for (size_t i = 0; i < users_amount; i++)
+    {
+        reg_user_t user;
+        int res = dump_v_value(sam_hive, &users_keys_list[i], &user);
+        if (res != 0)
+        {
+            close_hives(&system_hive, &sam_hive, delete_hives);
+            free(users_keys_list);
+            printf("[-] Error dumping V: 0x%08x", res);
+            return -1;
+        }
+
+        res = dump_user_name(&user);
+        if (res != 0)
+        {
+            close_hives(&system_hive, &sam_hive, delete_hives);
+            free(users_keys_list);
+            printf("[-] Error reading user name from V: 0x%08x\n", res);
+            return -1;
+        }
+        wprintf(L"%ls:%04x:nthash:lmhash:::\n", user.name, user.rid);
+    }
+
     close_hives(&system_hive, &sam_hive, delete_hives);
+    free(users_keys_list);
     return 0;
 }

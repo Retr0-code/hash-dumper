@@ -122,18 +122,33 @@ int dump_v_value(FILE* sam_hive, named_key_t* user_key_ptr, reg_user_t* user_inf
         return -4;
     }
 
+    user_info_ptr->rid = hex_to_u32(user_key_ptr->name);
     user_info_ptr->v_value = v_value_ptr;
     user_info_ptr->v_size = v_key_ptr->data_size;
 
-    uint32_t name_length = *((uint32_t*)(user_info_ptr->v_value) + 0x10) >> 1;
-    user_info_ptr->username = malloc_check_clean(
-        user_info_ptr->username,
-        name_length,
-        -5, 1,
-        v_key_ptr
-        );
-
     free(v_key_ptr);
+    return 0;
+}
+
+int dump_user_name(reg_user_t* user_info_ptr)
+{
+    // Validating parameters
+    if (user_info_ptr == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    uint32_t name_offset = 0;
+    uint32_t name_length = 0;
+    memcpy(&name_offset, ((const char*)user_info_ptr->v_value) + 0x0C, sizeof(uint32_t));
+    memcpy(&name_length, ((const char*)user_info_ptr->v_value) + 0x10, sizeof(uint32_t));
+    name_offset += 0xCC;
+
+    user_info_ptr->name = malloc_check(user_info_ptr->name, name_length + 2, -2);
+    memcpy(user_info_ptr->name, (const char*)user_info_ptr->v_value + name_offset, name_length);
+    user_info_ptr->name[name_length >> 1] = L'\0';
+
     return 0;
 }
 

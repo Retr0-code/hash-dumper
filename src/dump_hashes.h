@@ -10,10 +10,10 @@
 
 typedef struct
 {
-	uint16_t user_id;
+	uint32_t rid;
 	size_t v_size;
 	void* v_value;
-	char* username;
+	wchar_t* name;
 	uint8_t nthash[16];
 	uint8_t lmhash[16];
 } reg_user_t;
@@ -24,5 +24,7 @@ int dump_users_keys(FILE* sam_hive, named_key_t** users_keys_array, size_t* user
 // Dumps V value of specified user's key
 int dump_v_value(FILE* sam_hive, named_key_t* user_key_ptr, reg_user_t* user_info_ptr);
 
+// Writes ASCII name to user_info_ptr->name
+int dump_user_name(reg_user_t* user_info_ptr);
 
 #endif
