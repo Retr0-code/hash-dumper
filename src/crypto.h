@@ -47,6 +47,8 @@ int aes_128_cbc_decrypt(
 	uint8_t* dec_data
 );
 
+int des_ecb_decrypt(const uint8_t* enc_data, int data_len, const uint8_t* key, uint8_t* dec_data);
+
 static int openssl_evp_wrapper(
 	const uint8_t* in_data,
 	int data_len,

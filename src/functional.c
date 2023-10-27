@@ -45,3 +45,9 @@ char* get_random_string(size_t length)
 	str[length] = '\0';
 	return str;
 }
+
+void bytes_to_hex(uint8_t* input, size_t length, char* output)
+{
+	for (size_t i = 0; i < length; i++)
+		output += sprintf(output, "%02x", input[i]);
+}

@@ -1,5 +1,36 @@
 #include "dump_hashes.h"
 
+int ntlm_user_init(ntlm_user_t* user_info_ptr)
+{
+    // Validating parameters
+    if (user_info_ptr == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    user_info_ptr->lmhash = malloc_check(user_info_ptr->lmhash, 16, -2);
+    user_info_ptr->nthash = malloc_check_clean(user_info_ptr->nthash, 16, -3, 1, user_info_ptr->lmhash);
+
+    return 0;
+}
+
+int ntlm_user_destroy(ntlm_user_t* user_info_ptr)
+{
+    // Validating parameters
+    if (user_info_ptr == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    free(user_info_ptr->lmhash);
+    free(user_info_ptr->nthash);
+    free(user_info_ptr->v_value);
+
+    return 0;
+}
+
 int dump_users_keys(FILE* sam_hive, named_key_t** users_keys_array, size_t* users_amount)
 {
     // Validating parameters
@@ -97,7 +128,7 @@ int dump_users_keys(FILE* sam_hive, named_key_t** users_keys_array, size_t* user
 }
 
 // TODO(Complete the function)
-int dump_v_value(FILE* sam_hive, named_key_t* user_key_ptr, reg_user_t* user_info_ptr)
+int dump_v_value(FILE* sam_hive, named_key_t* user_key_ptr, ntlm_user_t* user_info_ptr)
 {
     // Validating parameters
     if (sam_hive == NULL || user_key_ptr == NULL || user_info_ptr == NULL)
@@ -122,7 +153,7 @@ int dump_v_value(FILE* sam_hive, named_key_t* user_key_ptr, reg_user_t* user_inf
         return -4;
     }
 
-    user_info_ptr->rid = strtoul(user_key_ptr->name, NULL, 16);
+    user_info_ptr->sid = strtoul(user_key_ptr->name, NULL, 16);
     user_info_ptr->v_value = v_value_ptr;
     user_info_ptr->v_size = v_key_ptr->data_size;
 
@@ -130,7 +161,7 @@ int dump_v_value(FILE* sam_hive, named_key_t* user_key_ptr, reg_user_t* user_inf
     return 0;
 }
 
-int dump_user_name(reg_user_t* user_info_ptr)
+int dump_user_name(ntlm_user_t* user_info_ptr)
 {
     // Validating parameters
     if (user_info_ptr == NULL)
@@ -152,7 +183,7 @@ int dump_user_name(reg_user_t* user_info_ptr)
     return 0;
 }
 
-int dump_user_ntlm(reg_user_t* user_info_ptr, const uint8_t* hashed_bootkey)
+int dump_user_ntlm(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey)
 {
     // Validating parameters
     if (user_info_ptr == NULL || hashed_bootkey == NULL)
@@ -172,7 +203,7 @@ int dump_user_ntlm(reg_user_t* user_info_ptr, const uint8_t* hashed_bootkey)
     return 0;
 }
 
-int decrypt_ntlm_hash(reg_user_t* user_info_ptr, const uint8_t* hashed_bootkey, hash_type_e hash_type)
+int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey, hash_type_e hash_type)
 {
     // Validating parameters
     if (user_info_ptr == NULL || hashed_bootkey == NULL)
@@ -205,13 +236,14 @@ int decrypt_ntlm_hash(reg_user_t* user_info_ptr, const uint8_t* hashed_bootkey, 
     memset(encrypted_hash_salt, 0, 16);
 
     // Setting proper pointer to hash
-    uint8_t* hash_pointer = hash_nt ? user_info_ptr->nthash : user_info_ptr->lmhash;
+    uint8_t* hash_pointer = hash_type ? user_info_ptr->nthash : user_info_ptr->lmhash;
     switch (revision)
     {
     case 1:
         if (hash_exists != 0x14)
         {
-            hash_pointer = hash_nt ? EMPTY_NT_HASH : EMPTY_LM_HASH;
+            //hash_pointer = hash_nt ? EMPTY_NT_HASH : EMPTY_LM_HASH;
+            memcpy(hash_pointer, hash_type ? EMPTY_NT_HASH : EMPTY_LM_HASH, 16);
             return 0;
         }
 
@@ -221,7 +253,7 @@ int decrypt_ntlm_hash(reg_user_t* user_info_ptr, const uint8_t* hashed_bootkey, 
     case 2:
         if (hash_exists != 0x38)
         {
-            hash_pointer = hash_nt ? EMPTY_NT_HASH : EMPTY_LM_HASH;
+            memcpy(hash_pointer, hash_type ? EMPTY_NT_HASH : EMPTY_LM_HASH, 16);
             return 0;
         }
 
@@ -229,6 +261,9 @@ int decrypt_ntlm_hash(reg_user_t* user_info_ptr, const uint8_t* hashed_bootkey, 
         memcpy(encrypted_hash_salt, ((uint8_t*)user_info_ptr->v_value) + hash_offset + 4 + (hash_type * 4), 16);
         memcpy(encrypted_hash, ((uint8_t*)user_info_ptr->v_value) + hash_offset + 20 + (hash_type * 4), 32);
         // Decrypt NTLMv2 Hash (with a salt)
+        if (decrypt_salted_hash(encrypted_hash, hashed_bootkey, encrypted_hash_salt, user_info_ptr, hash_pointer) != 0)
+            return -3;
+
         break;
 
     default:
@@ -236,5 +271,120 @@ int decrypt_ntlm_hash(reg_user_t* user_info_ptr, const uint8_t* hashed_bootkey, 
     }
 
     return 0;
+}
+
+int decrypt_salted_hash(uint8_t* enc_hash, uint8_t* hashed_bootkey, uint8_t* salt, ntlm_user_t* user_info_ptr, uint8_t* decrypted_hash)
+{
+    // Validating parameters
+    if (enc_hash == NULL || salt == NULL || user_info_ptr == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    uint64_t des_key1 = 0;
+    uint64_t des_key2 = 0;
+    if (sid_to_des_keys(user_info_ptr->sid, &des_key1, &des_key2) != 0)
+        return -2;
+
+    uint8_t* pre_des_hash = malloc_check(pre_des_hash, 16, -3);
+    if (aes_128_cbc_decrypt(enc_hash, 16, hashed_bootkey, NULL, pre_des_hash) == 0)
+    {
+        free(pre_des_hash);
+        return -4;
+    }
+
+    uint8_t* des_key = &des_key1;
+    for (size_t i = 0; i < 16; i += 8, des_key = &des_key2)
+    {
+        if (des_ecb_decrypt(pre_des_hash + i, 8, des_key, decrypted_hash + i) == 0)
+        {
+            free(pre_des_hash);
+            free(decrypted_hash);
+            decrypted_hash = NULL;
+            return -6;
+        }
+    }
+
+    return 0;
+}
+
+int sid_to_des_keys(uint32_t sid, uint64_t* key1, uint64_t* key2)
+{
+    // Validating parameters
+    if (key1 == NULL || key2 == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Creating pointers to use uint64_t pointer as a byte array
+    uint8_t* key1_array = key1;
+    uint8_t* key2_array = key2;
+
+    // Permutating first 7-byte key
+    *key1 = (uint64_t)(sid);
+    key1_array[4] = key1_array[0];
+    key1_array[5] = key1_array[1];
+    key1_array[6] = key1_array[2];
+    *key1 = BYTE_SWAP64(*key1);
+
+    // Permutating second 7-byte key
+    key2_array[7] = key1_array[4];
+    key2_array[6] = key1_array[7];
+    key2_array[5] = key1_array[6];
+    key2_array[4] = key1_array[5];
+
+    key2_array[3] = key2_array[7];
+    key2_array[2] = key2_array[6];
+    key2_array[1] = key2_array[5];
+
+    *key1 = permutate_sid_key(*key1);
+    *key2 = permutate_sid_key(*key2);
+
+    return 0;
+}
+
+uint64_t permutate_sid_key(uint64_t input_key)
+{
+    const uint8_t odd_parity[] = {
+        1, 1, 2, 2, 4, 4, 7, 7, 8, 8, 11, 11, 13, 13, 14, 14,
+        16, 16, 19, 19, 21, 21, 22, 22, 25, 25, 26, 26, 28, 28, 31, 31,
+        32, 32, 35, 35, 37, 37, 38, 38, 41, 41, 42, 42, 44, 44, 47, 47,
+        49, 49, 50, 50, 52, 52, 55, 55, 56, 56, 59, 59, 61, 61, 62, 62,
+        64, 64, 67, 67, 69, 69, 70, 70, 73, 73, 74, 74, 76, 76, 79, 79,
+        81, 81, 82, 82, 84, 84, 87, 87, 88, 88, 91, 91, 93, 93, 94, 94,
+        97, 97, 98, 98, 100, 100, 103, 103, 104, 104, 107, 107, 109, 109, 110, 110,
+        112, 112, 115, 115, 117, 117, 118, 118, 121, 121, 122, 122, 124, 124, 127, 127,
+        128, 128, 131, 131, 133, 133, 134, 134, 137, 137, 138, 138, 140, 140, 143, 143,
+        145, 145, 146, 146, 148, 148, 151, 151, 152, 152, 155, 155, 157, 157, 158, 158,
+        161, 161, 162, 162, 164, 164, 167, 167, 168, 168, 171, 171, 173, 173, 174, 174,
+        176, 176, 179, 179, 181, 181, 182, 182, 185, 185, 186, 186, 188, 188, 191, 191,
+        193, 193, 194, 194, 196, 196, 199, 199, 200, 200, 203, 203, 205, 205, 206, 206,
+        208, 208, 211, 211, 213, 213, 214, 214, 217, 217, 218, 218, 220, 220, 223, 223,
+        224, 224, 227, 227, 229, 229, 230, 230, 233, 233, 234, 234, 236, 236, 239, 239,
+        241, 241, 242, 242, 244, 244, 247, 247, 248, 248, 251, 251, 253, 253, 254, 254
+    };
+
+    uint64_t key = 0;
+    uint8_t* key_array = &key;
+    uint8_t* input_key_array = &input_key;
+
+    key_array[7] = input_key_array[7] >> 1;
+    key_array[6] = ((input_key_array[7] & 0x01) << 6) | (input_key_array[6] >> 2);
+    key_array[5] = ((input_key_array[6] & 0x03) << 5) | (input_key_array[5] >> 3);
+    key_array[4] = ((input_key_array[5] & 0x07) << 4) | (input_key_array[4] >> 4);
+    key_array[3] = ((input_key_array[4] & 0x0F) << 3) | (input_key_array[3] >> 5);
+    key_array[2] = ((input_key_array[3] & 0x1F) << 2) | (input_key_array[2] >> 6);
+    key_array[1] = ((input_key_array[2] & 0x3F) << 1) | (input_key_array[1] >> 7);
+    key_array[0] = (input_key_array[1] & 0x7F);
+
+    for (size_t i = 0; i < 8; i++)
+    {
+        key_array[i] = key_array[i] << 1;
+        key_array[i] = odd_parity[key_array[i]];
+    }
+
+    return key;
 }
 

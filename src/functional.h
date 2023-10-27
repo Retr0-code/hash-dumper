@@ -68,4 +68,6 @@ void cleanup_pointers(size_t amount, ...);
 // Generates random string of specified length
 char* get_random_string(size_t length);
 
+void bytes_to_hex(uint8_t* input, size_t length, char* output);
+
 #endif

@@ -83,6 +83,22 @@ int aes_128_cbc_decrypt(
 	return openssl_evp_wrapper(enc_data, data_len, key, iv, dec_data, 0, EVP_aes_128_cbc());
 }
 
+int des_ecb_decrypt(const uint8_t* enc_data, int data_len, const uint8_t* key, uint8_t* dec_data)
+{
+	// Loading legacy algorithms provider
+	OSSL_PROVIDER* legacy = OSSL_PROVIDER_load(NULL, "legacy");
+	if (legacy == NULL) {
+		ERR_print_errors_fp(stderr);
+		return 1;
+	}
+
+	int result = openssl_evp_wrapper(enc_data, data_len, key, NULL, dec_data, 0, EVP_des_ecb());
+
+	// Unloading legacy provider
+	OSSL_PROVIDER_unload(legacy);
+	return result;
+}
+
 static int openssl_evp_wrapper(
 	const uint8_t* in_data,
 	int data_len,

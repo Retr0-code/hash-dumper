@@ -182,9 +182,12 @@ int main(int argc, char const *argv[])
         }
     }
 
+    char ascii_nthash[33];
+    char ascii_lmhash[33];
+    ntlm_user_t user;
     for (size_t i = 0; i < users_amount; i++)
     {
-        reg_user_t user;
+        ntlm_user_init(&user);
         int res = dump_v_value(sam_hive, &users_keys_list[i], &user);
         if (res != 0)
         {
@@ -204,8 +207,14 @@ int main(int argc, char const *argv[])
         }
 
         dump_user_ntlm(&user, hashed_bootkey);
-        wprintf(L"%ls:%04x:nthash:lmhash:::\n", user.name, user.rid);
-        free(user.v_value);
+        bytes_to_hex(user.nthash, 16, ascii_nthash);
+        bytes_to_hex(user.lmhash, 16, ascii_lmhash);
+        ascii_nthash[32] = '\0';
+        ascii_lmhash[32] = '\0';
+
+        wprintf(L"%ls:%i:", user.name, user.sid);
+        printf("%s:%s:::\n", ascii_lmhash, ascii_nthash);
+        ntlm_user_destroy(&user);
     }
 
     close_hives(&system_hive, &sam_hive, delete_hives);
