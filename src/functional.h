@@ -18,11 +18,11 @@
 
 #include <time.h>
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
-
 
 #if defined(__linux__) || defined(__unix__)
 
