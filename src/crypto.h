@@ -27,10 +27,17 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include <openssl/evp.h>
 #include <openssl/aes.h>
+#include <openssl/des.h>
+#include <openssl/rc4.h>
 #include <openssl/md5.h>
+
+#if (OPENSSL_VERSION_MAJOR >= 3)
+#include <openssl/evp.h>
 #include <openssl/provider.h>
+#endif
+
+#include "functional.h"
 
 // Returns md5 hash of specified data
 uint8_t* get_md5(const char* data, size_t data_size);
@@ -49,6 +56,7 @@ int aes_128_cbc_decrypt(
 
 int des_ecb_decrypt(const uint8_t* enc_data, int data_len, const uint8_t* key, uint8_t* dec_data);
 
+#if (OPENSSL_VERSION_MAJOR >= 3)
 static int openssl_evp_wrapper(
 	const uint8_t* in_data,
 	int data_len,
@@ -56,7 +64,9 @@ static int openssl_evp_wrapper(
 	const uint8_t* iv,
 	uint8_t* out_data,
 	int encrypt_mode,
+	int padding,
 	const EVP_CIPHER* cipher
 );
+#endif
 
 #endif

@@ -203,7 +203,7 @@ int dump_user_ntlm(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey)
     return 0;
 }
 
-int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey, hash_type_e hash_type)
+int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey, const hash_type_e hash_type)
 {
     // Validating parameters
     if (user_info_ptr == NULL || hashed_bootkey == NULL)
@@ -214,18 +214,18 @@ int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey,
 
     // Retrieving hash offset from V value
     uint32_t hash_offset = 0;
-    memcpy(&hash_offset, (const char*)user_info_ptr->v_value + 0xA8 + (0x18 * hash_type), sizeof(uint32_t));
+    memcpy(&hash_offset, (uint8_t*)user_info_ptr->v_value + 0xA8, sizeof(uint32_t));
     hash_offset += 0xCC;
 
     uint32_t hash_exists = 0;
-    memcpy(&hash_exists, (const char*)user_info_ptr->v_value + 0xA0 + (0x0C * hash_type), sizeof(uint32_t));
+    memcpy(&hash_exists, (uint8_t*)user_info_ptr->v_value + 0xA0 + (0x0C * hash_type), sizeof(uint32_t));
 
     // Retrieving hash revision from V value. Specific condition for LM hash
     uint8_t revision = *((uint8_t*)user_info_ptr->v_value + hash_offset + 2);
     if (hash_type == hash_lm)
     {
         uint32_t revision_offset = 0;
-        memcpy(&revision_offset, (const char*)user_info_ptr->v_value + 0x9C, sizeof(uint32_t));
+        memcpy(&revision_offset, (uint8_t*)user_info_ptr->v_value + 0x9C, sizeof(uint32_t));
         revision = *((uint8_t*)user_info_ptr->v_value + revision_offset + 0xCC + 2);
     }
 
@@ -258,8 +258,9 @@ int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey,
         }
 
         // Reading salt and encrypted hash (offset +4 if hash type is NT)
-        memcpy(encrypted_hash_salt, ((uint8_t*)user_info_ptr->v_value) + hash_offset + 4 + (hash_type * 4), 16);
-        memcpy(encrypted_hash, ((uint8_t*)user_info_ptr->v_value) + hash_offset + 20 + (hash_type * 4), 32);
+        memcpy(encrypted_hash_salt, (uint8_t*)user_info_ptr->v_value + hash_offset + 4 + (hash_type * 4), 16);
+        memcpy(encrypted_hash, (uint8_t*)user_info_ptr->v_value + hash_offset + 20 + (hash_type * 4), 32);
+
         // Decrypt NTLMv2 Hash (with a salt)
         if (decrypt_salted_hash(encrypted_hash, hashed_bootkey, encrypted_hash_salt, user_info_ptr, hash_pointer) != 0)
             return -3;
@@ -287,21 +288,22 @@ int decrypt_salted_hash(uint8_t* enc_hash, uint8_t* hashed_bootkey, uint8_t* sal
     if (sid_to_des_keys(user_info_ptr->sid, &des_key1, &des_key2) != 0)
         return -2;
 
-    uint8_t* pre_des_hash = malloc_check(pre_des_hash, 16, -3);
-    if (aes_128_cbc_decrypt(enc_hash, 16, hashed_bootkey, NULL, pre_des_hash) == 0)
+    des_key1 = BYTE_SWAP64(des_key1);
+    des_key2 = BYTE_SWAP64(des_key2);
+
+    uint8_t* pre_des_hash = malloc_check(pre_des_hash, 32, -3);
+    if (aes_128_cbc_decrypt(enc_hash, 32, hashed_bootkey, salt, pre_des_hash) == 0)
     {
         free(pre_des_hash);
         return -4;
     }
 
     uint8_t* des_key = &des_key1;
-    for (size_t i = 0; i < 16; i += 8, des_key = &des_key2)
+    for (size_t i = 0; i < 16; i += sizeof(uint64_t), des_key = &des_key2)
     {
-        if (des_ecb_decrypt(pre_des_hash + i, 8, des_key, decrypted_hash + i) == 0)
+        if (des_ecb_decrypt(pre_des_hash + i, sizeof(uint64_t), des_key, decrypted_hash + i) == 0)
         {
             free(pre_des_hash);
-            free(decrypted_hash);
-            decrypted_hash = NULL;
             return -6;
         }
     }
@@ -339,13 +341,13 @@ int sid_to_des_keys(uint32_t sid, uint64_t* key1, uint64_t* key2)
     key2_array[2] = key2_array[6];
     key2_array[1] = key2_array[5];
 
-    *key1 = permutate_sid_key(*key1);
-    *key2 = permutate_sid_key(*key2);
+    *key1 = permutate_sid_key_set_odd_parity(*key1);
+    *key2 = permutate_sid_key_set_odd_parity(*key2);
 
     return 0;
 }
 
-uint64_t permutate_sid_key(uint64_t input_key)
+uint64_t permutate_sid_key_set_odd_parity(uint64_t input_key)
 {
     const uint8_t odd_parity[] = {
         1, 1, 2, 2, 4, 4, 7, 7, 8, 8, 11, 11, 13, 13, 14, 14,

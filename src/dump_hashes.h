@@ -7,6 +7,8 @@
 #include "hive.h"
 #include "crypto.h"
 
+//#include "own_des.h"
+
 #define EMPTY_LM_HASH	"\xaa\xd3\xb4\x35\xb5\x14\x04\xee\xaa\xd3\xb4\x35\xb5\x14\x04\xee"
 #define EMPTY_NT_HASH	"\x31\xd6\xcf\xe0\xd1\x6a\xe9\x31\xb7\x3c\x59\xd7\xe0\xc0\x89\xc0"
 #define NTPASSWORD		"NTPASSWORD"
@@ -45,7 +47,7 @@ int dump_user_name(ntlm_user_t* user_info_ptr);
 int dump_user_ntlm(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey);
 
 // Decrypts NT/LM hash
-int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey, hash_type_e hash_type);
+int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey, const hash_type_e hash_type);
 
 // Decrypts salted/NTLMv2 hash
 int decrypt_salted_hash(
@@ -60,6 +62,6 @@ int decrypt_salted_hash(
 int sid_to_des_keys(uint32_t rid, uint64_t* key1, uint64_t* key2);
 
 // Permutates key to 8-byte DES key
-uint64_t permutate_sid_key(uint64_t input_key);
+uint64_t permutate_sid_key_set_odd_parity(uint64_t input_key);
 
 #endif

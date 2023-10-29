@@ -22,6 +22,7 @@
 
 #include "crypto.h"
 
+#if (OPENSSL_VERSION_MAJOR >= 3)
 uint8_t* get_md5(const char* data, size_t data_size)
 {
 	EVP_MD_CTX* context = EVP_MD_CTX_new();
@@ -65,7 +66,7 @@ int rc4_encrypt(const uint8_t* data, size_t data_len, uint8_t* key, uint8_t* enc
 		return 1;
 	}
 
-	int result = openssl_evp_wrapper(data, data_len, key, NULL, enc_data, 1, EVP_rc4());
+	int result = openssl_evp_wrapper(data, data_len, key, NULL, enc_data, 1, 0, EVP_rc4());
 
 	// Unloading legacy provider
 	OSSL_PROVIDER_unload(legacy);
@@ -80,7 +81,7 @@ int aes_128_cbc_decrypt(
 	uint8_t* dec_data
 )
 {
-	return openssl_evp_wrapper(enc_data, data_len, key, iv, dec_data, 0, EVP_aes_128_cbc());
+	return openssl_evp_wrapper(enc_data, data_len, key, iv, dec_data, 0, 0, EVP_aes_128_cbc());
 }
 
 int des_ecb_decrypt(const uint8_t* enc_data, int data_len, const uint8_t* key, uint8_t* dec_data)
@@ -92,7 +93,7 @@ int des_ecb_decrypt(const uint8_t* enc_data, int data_len, const uint8_t* key, u
 		return 1;
 	}
 
-	int result = openssl_evp_wrapper(enc_data, data_len, key, NULL, dec_data, 0, EVP_des_ecb());
+	int result = openssl_evp_wrapper(enc_data, data_len, key, NULL, dec_data, 0, 0, EVP_des_ecb());
 
 	// Unloading legacy provider
 	OSSL_PROVIDER_unload(legacy);
@@ -106,12 +107,13 @@ static int openssl_evp_wrapper(
 	const uint8_t* iv,
 	uint8_t* out_data,
 	int encrypt_mode,
+	int padding,
 	const EVP_CIPHER* cipher
 )
 {
 	// Constructing a context cipher
 	EVP_CIPHER_CTX* context = EVP_CIPHER_CTX_new();
-	if (context == NULL)
+	if (context == NULL || padding < 0)
 	{
 		errno = EBADF;
 		return 0;
@@ -125,7 +127,7 @@ static int openssl_evp_wrapper(
 		return 0;
 	}
 
-	EVP_CIPHER_CTX_set_padding(context, 0);
+	EVP_CIPHER_CTX_set_padding(context, padding);
 
 	// Updating cipher using specified parameters
 	int out_len;
@@ -149,3 +151,81 @@ static int openssl_evp_wrapper(
 	EVP_CIPHER_CTX_free(context);
 	return data_len;
 }
+
+#else
+
+uint8_t* get_md5(const char* data, size_t data_size)
+{
+	// Validating parameters
+	if (data == NULL || data_size == 0)
+	{
+		errno = EINVAL;
+		return NULL;
+	}
+
+	uint8_t hash = malloc_check(hash, 16, NULL);
+
+	MD5_CTX context;
+	MD5_Init(&context);
+	MD5_Update(&context, data, data_size);
+	MD5_Final(hash, &context);
+
+	return hash;
+}
+
+int rc4_encrypt(const uint8_t* data, size_t data_len, uint8_t* key, uint8_t* enc_data)
+{
+	// Validating parameters
+	if (data == NULL || data_len == 0 || key == NULL || enc_data == NULL)
+	{
+		errno = EINVAL;
+		return NULL;
+	}
+
+	RC4_KEY rc4_key;
+	RC4_set_key(&rc4_key, 16, key);
+	RC4(&rc4_key, data_len, data, enc_data);
+	return data_len;
+}
+
+int aes_128_cbc_decrypt(
+	const uint8_t* enc_data,
+	int data_len,
+	const uint8_t* key,
+	const uint8_t* iv,
+	uint8_t* dec_data
+)
+{
+	// Validating parameters
+	if (enc_data == NULL || data_len == 0 || key == NULL || iv == NULL || dec_data == NULL)
+	{
+		errno = EINVAL;
+		return NULL;
+	}
+
+	AES_KEY dec_key;
+	AES_set_decrypt_key(key, 128, &dec_key);
+	AES_cbc_encrypt(enc_data, dec_data, data_len, &dec_key, iv, AES_DECRYPT);
+	return data_len;
+}
+
+int des_ecb_decrypt(const uint8_t* enc_data, int data_len, const uint8_t* key, uint8_t* dec_data)
+{
+	// Validating parameters
+	if (enc_data == NULL || data_len == 0 || key == NULL || dec_data == NULL)
+	{
+		errno = EINVAL;
+		return NULL;
+	}
+
+	DES_cblock key_block;
+	memcpy(&key_block, key, sizeof(uint64_t));
+	DES_key_schedule schedule;
+	DES_set_key(&key_block, &schedule);
+	DES_set_key_checked(&key_block, &schedule);
+
+	DES_ecb_encrypt(enc_data, dec_data, &schedule, DES_DECRYPT);
+	return data_len;
+}
+
+#endif
