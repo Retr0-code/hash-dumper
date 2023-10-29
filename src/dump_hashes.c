@@ -107,7 +107,7 @@ int dump_users_keys(FILE* sam_hive, named_key_t** users_keys_array, size_t* user
         -9, 5,
         hive_header_ptr, base_nk_ptr, users_nk_ptr, reg_users_path, hints
     );
-    memset(*users_keys_array, NULL, subkey_list.elements_amount * sizeof(named_key_t));
+    memset(*users_keys_array, 0, subkey_list.elements_amount * sizeof(named_key_t));
     *users_amount = 0;
 
     // Iterate throug all Users subkeys
@@ -303,7 +303,13 @@ int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey,
     return 0;
 }
 
-int decrypt_hash(uint8_t* enc_hash, uint8_t* hashed_bootkey, uint8_t* ntlmphrase, ntlm_user_t* user_info_ptr, uint8_t* decrypted_hash)
+int decrypt_hash(
+    const uint8_t* enc_hash,
+    const uint8_t* hashed_bootkey,
+    const uint8_t* ntlmphrase,
+    ntlm_user_t* user_info_ptr,
+    uint8_t* decrypted_hash
+)
 {
     // Validating parameters
     if (enc_hash == NULL || hashed_bootkey == NULL || ntlmphrase == NULL || user_info_ptr == NULL || decrypted_hash == NULL)
@@ -355,7 +361,13 @@ int decrypt_hash(uint8_t* enc_hash, uint8_t* hashed_bootkey, uint8_t* ntlmphrase
     return 0;
 }
 
-int decrypt_salted_hash(uint8_t* enc_hash, uint8_t* hashed_bootkey, uint8_t* salt, ntlm_user_t* user_info_ptr, uint8_t* decrypted_hash)
+int decrypt_salted_hash(
+    const uint8_t* enc_hash,
+    const uint8_t* hashed_bootkey,
+    const uint8_t* salt,
+    ntlm_user_t* user_info_ptr,
+    uint8_t* decrypted_hash
+)
 {
     // Validating parameters
     if (enc_hash == NULL || hashed_bootkey == NULL || salt == NULL || user_info_ptr == NULL || decrypted_hash == NULL)

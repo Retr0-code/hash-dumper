@@ -43,7 +43,7 @@
 uint8_t* get_md5(const char* data, size_t data_size);
 
 // Encrypts RC4
-int rc4_encrypt(const uint8_t* data, size_t data_len, uint8_t* key, uint8_t* enc_data);
+int rc4_encrypt(const uint8_t* data, int data_len, uint8_t* key, uint8_t* enc_data);
 
 // Decryps AES 128 CBC
 int aes_128_cbc_decrypt(
