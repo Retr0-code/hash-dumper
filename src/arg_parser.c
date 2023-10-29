@@ -158,7 +158,7 @@ int arg_parse(int argc, const char **argv, arg_parser_t *parser_ptr)
 // TODO(Fix tabulation issue)
 void arg_show_help(arg_parser_t* parser_ptr)
 {
-    puts(parser_ptr->prog_info);
+    printf("%s\n\n", parser_ptr->prog_info);
 
     for (size_t i = 0; i < parser_ptr->arguments->size; i++)
     {
@@ -167,7 +167,16 @@ void arg_show_help(arg_parser_t* parser_ptr)
 
         argument_t* arg_temp = parser_ptr->arguments->data[i]->value;
         const char* type_val = arg_temp->type == arg_flag ? "FLAG" : "PARM";
-        printf("%s\t%s\t%s\n", arg_temp->key, type_val, arg_temp->description);
+        printf("%s\t%10s\t%s\n", arg_temp->key, type_val, arg_temp->description);
+
+        ht_node_t* temp_node = parser_ptr->arguments->data[i];
+        while (temp_node->next != NULL)
+        {
+            temp_node = temp_node->next;
+            arg_temp = temp_node->value;
+            type_val = arg_temp->type == arg_flag ? "FLAG" : "PARM";
+            printf("%s\t%10s\t%s\n", arg_temp->key, type_val, arg_temp->description);
+        }
     }
 }
 

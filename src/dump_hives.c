@@ -10,7 +10,7 @@
 
 ----
 
-	This file defines functions for dumping NTLM hashes from SAM and SYSTEM
+	This header defines functions for working with low-level hives in windows registry
 */
 
 #include "dump_hives.h"

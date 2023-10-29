@@ -31,6 +31,11 @@
 #define IS_WINDOWS 0
 #endif
 
+#define PROGRAM_INFO    \
+"hash-dumper is utility for dumping NTLMv1/2 hashes from windows registry hives SAM and SYSTEM. \
+It can be used in realtime dumping mode, when hives will be dumped to temp files and then deleted, \
+and mode where you can supply already dumped hives."
+
 int main(int argc, char const *argv[])
 {
     setlocale(LC_ALL, "");
@@ -40,7 +45,7 @@ int main(int argc, char const *argv[])
     {
         // Initializing arguments parser
         // To avoid auto resize allocating one more cell
-        int res = arg_parser_init(5, "", arg_parser);
+        int res = arg_parser_init(5, PROGRAM_INFO, arg_parser);
         if (res != arg_success)
         {
             printf("[-] Error initializing argument parser: 0x%08x\n", res);
@@ -138,6 +143,8 @@ int main(int argc, char const *argv[])
         return -1;
     }
 
+    puts("[+] Hives successfully opened");
+
     wchar_t boot_key_hex[33];
     {
         int result = dump_bootkey(system_hive, boot_key_hex);
@@ -219,5 +226,6 @@ int main(int argc, char const *argv[])
 
     close_hives(&system_hive, &sam_hive, delete_hives);
     free(users_keys_list);
+    puts("\n[+] Successfully finished");
     return 0;
 }

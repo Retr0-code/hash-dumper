@@ -1,3 +1,18 @@
+/*
+	Copyright (C) 2023 Nikita Retr0-code Korneev
+
+	hash_dumper is free software: you can redistribute, modify it
+	under the terms of the GNU Affero General Public License version 3.
+
+	You should have received a copy of GNU Affero General Public License
+	version 3 along with hash_dumper.
+	If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
+
+----
+
+	This header describes functions for dumping NTLM hashes from SAM and SYSTEM
+*/
+
 #ifndef DUMP_HASHES_H
 #define DUMP_HASHES_H
 
@@ -48,6 +63,15 @@ int dump_user_ntlm(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey);
 
 // Decrypts NT/LM hash
 int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey, const hash_type_e hash_type);
+
+// Decrypts non-salted/NTLMv1 hash
+int decrypt_hash(
+	uint8_t* enc_hash,
+	uint8_t* hashed_bootkey,
+	uint8_t* ntlmphrase,
+	ntlm_user_t* user_info_ptr,
+	uint8_t* decrypted_hash
+);
 
 // Decrypts salted/NTLMv2 hash
 int decrypt_salted_hash(

@@ -10,7 +10,7 @@
 
 ----
 
-	This header describes functions for dumping NTLM hashes from SAM and SYSTEM
+	This header describes functions for working with low-level hives in windows registry
 */
 
 #ifndef HASH_DUMP_H

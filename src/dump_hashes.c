@@ -1,3 +1,18 @@
+/*
+    Copyright (C) 2023 Nikita Retr0-code Korneev
+
+    hash_dumper is free software: you can redistribute, modify it
+    under the terms of the GNU Affero General Public License version 3.
+
+    You should have received a copy of GNU Affero General Public License
+    version 3 along with hash_dumper.
+    If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
+
+----
+
+    This header describes functions for dumping NTLM hashes from SAM and SYSTEM
+*/
+
 #include "dump_hashes.h"
 
 int ntlm_user_init(ntlm_user_t* user_info_ptr)
@@ -249,6 +264,14 @@ int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey,
 
         memcpy(encrypted_hash, ((uint8_t*)user_info_ptr->v_value) + hash_offset + 4, 16);
         // Decrypt NTLMv1 Hash (without a salt)
+        if (decrypt_hash(
+            encrypted_hash,
+            hashed_bootkey,
+            hash_type ? NTPASSWORD : LMPASSWORD,
+            user_info_ptr,
+            hash_pointer
+        ) != 0)
+            return -3;
         break;
     case 2:
         if (hash_exists != 0x38)
@@ -262,8 +285,14 @@ int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey,
         memcpy(encrypted_hash, (uint8_t*)user_info_ptr->v_value + hash_offset + 20 + (hash_type * 4), 32);
 
         // Decrypt NTLMv2 Hash (with a salt)
-        if (decrypt_salted_hash(encrypted_hash, hashed_bootkey, encrypted_hash_salt, user_info_ptr, hash_pointer) != 0)
-            return -3;
+        if (decrypt_salted_hash(
+            encrypted_hash,
+            hashed_bootkey,
+            encrypted_hash_salt,
+            user_info_ptr,
+            hash_pointer
+        ) != 0)
+            return -4;
 
         break;
 
@@ -274,10 +303,62 @@ int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey,
     return 0;
 }
 
+int decrypt_hash(uint8_t* enc_hash, uint8_t* hashed_bootkey, uint8_t* ntlmphrase, ntlm_user_t* user_info_ptr, uint8_t* decrypted_hash)
+{
+    // Validating parameters
+    if (enc_hash == NULL || hashed_bootkey == NULL || ntlmphrase == NULL || user_info_ptr == NULL || decrypted_hash == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    uint64_t des_key1 = 0;
+    uint64_t des_key2 = 0;
+    if (sid_to_des_keys(user_info_ptr->sid, &des_key1, &des_key2) != 0)
+        return -2;
+
+    des_key1 = BYTE_SWAP64(des_key1);
+    des_key2 = BYTE_SWAP64(des_key2);
+
+    // Constructing full data for RC4 key
+    size_t ntlmphrase_len = strlen(ntlmphrase) + 1;
+    uint8_t* full_data = malloc_check(full_data, 16 + sizeof(uint32_t) + ntlmphrase_len, -3);
+    memcpy(full_data, hashed_bootkey, 16);
+    memcpy(full_data + 16, &user_info_ptr->sid, sizeof(uint32_t));
+    memcpy(full_data + 16 + sizeof(uint32_t), ntlmphrase, ntlmphrase_len);
+
+    // MD5 of the data will be RC4 key
+    uint8_t* md5_hash = get_md5(full_data, 16 + sizeof(uint32_t) + ntlmphrase_len);
+    if (md5_hash == NULL)
+    {
+        free(full_data);
+        return -4;
+    }
+
+    uint8_t pre_des_hash[32];
+    if (rc4_encrypt(enc_hash, 16, md5_hash, pre_des_hash) == 0)
+    {
+        cleanup_pointers(2, full_data, md5_hash);
+        return -5;
+    }
+
+    uint8_t* des_key = &des_key1;
+    for (size_t i = 0; i < 16; i += sizeof(uint64_t), des_key = &des_key2)
+    {
+        if (des_ecb_decrypt(pre_des_hash + i, sizeof(uint64_t), des_key, decrypted_hash + i) == 0)
+        {
+            free(pre_des_hash);
+            return -6;
+        }
+    }
+
+    return 0;
+}
+
 int decrypt_salted_hash(uint8_t* enc_hash, uint8_t* hashed_bootkey, uint8_t* salt, ntlm_user_t* user_info_ptr, uint8_t* decrypted_hash)
 {
     // Validating parameters
-    if (enc_hash == NULL || salt == NULL || user_info_ptr == NULL)
+    if (enc_hash == NULL || hashed_bootkey == NULL || salt == NULL || user_info_ptr == NULL || decrypted_hash == NULL)
     {
         errno = EINVAL;
         return -1;
