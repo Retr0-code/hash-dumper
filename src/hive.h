@@ -275,10 +275,10 @@ void* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr);
 wchar_t* reg_get_class(named_key_t* nk_ptr, FILE* hive_ptr);
 
 // Sets file cursor from beggining to 0x1000 + root_offset
-inline int hive_file_seek(FILE* hive_ptr, const uint32_t root_offset);
+int hive_file_seek(FILE* hive_ptr, const uint32_t root_offset);
 
 // Reads structure from given give
-inline size_t hive_read_struct(FILE* hive_ptr, void* hive_struct, size_t read_size);
+size_t hive_read_struct(FILE* hive_ptr, void* hive_struct, size_t read_size);
 
 // Reads root named key and header of a hive
 int hive_get_root(FILE* hive_ptr, hive_header_t* hive_header_ptr, named_key_t* root_key_ptr);

@@ -251,7 +251,7 @@ reg_path_t* reg_make_path(uint32_t depth, ...)
 	}
 
 	// Allocation of registry path struct
-	reg_path_t* reg_path_ptr = malloc_check(reg_path_ptr, sizeof(reg_path_t), hv_alloc_error);
+	reg_path_t* reg_path_ptr = malloc_check(reg_path_ptr, sizeof(reg_path_t), NULL);
 
 	// Setting given values
 	reg_path_ptr->size = depth;
