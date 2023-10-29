@@ -154,8 +154,6 @@ void set_paths(const char* sys_hive_path, const char* sam_hive_path)
 
 	strcpy(system_hive_filepath, sys_hive_path);
 	strcpy(sam_hive_filepath, sam_hive_path);
-	// system_hive_filepath = sys_hive_path;
-	// sam_hive_filepath = sam_hive_path;
 }
 
 int open_hives(FILE** system_hive, FILE** sam_hive)
@@ -184,6 +182,4 @@ void close_hives(FILE** system_hive, FILE** sam_hive, int delete_hives)
 		remove(system_hive_filepath);
 		remove(sam_hive_filepath);
 	}
-
-	return 0;
 }
