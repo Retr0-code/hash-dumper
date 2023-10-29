@@ -165,7 +165,7 @@ int main(int argc, char const *argv[])
         int result = get_hashed_bootkey(boot_key_hex, sam_hive, hashed_bootkey);
         if (result != 0)
         {
-            printf("%i\n", result);
+            printf("[-] Failed to get hashed bootkey: %08x\n", result);
             close_hives(&system_hive, &sam_hive, delete_hives);
             return -1;
         }
