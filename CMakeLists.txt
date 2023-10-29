@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.17.0)
+cmake_minimum_required(VERSION 3.16.0)
 
 project(hash-dumper
     VERSION 0.1
@@ -14,6 +14,7 @@ set(EXEC_SRC
     src/functional.c
     src/arg_parser.c
     src/dump_bootkey.c
+    src/dump_hashes.c
     src/string-hashtable/hash_table.c
     )
 
