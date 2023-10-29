@@ -165,7 +165,7 @@ int open_hives(FILE** system_hive, FILE** sam_hive)
 	*sam_hive = fopen(sam_hive_filepath, "rb");
 	if (*sam_hive == NULL)
 	{
-		fclose(system_hive);
+		fclose(*system_hive);
 		return -2;
 	}
 

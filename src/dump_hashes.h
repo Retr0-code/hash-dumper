@@ -66,18 +66,18 @@ int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey,
 
 // Decrypts non-salted/NTLMv1 hash
 int decrypt_hash(
-	uint8_t* enc_hash,
-	uint8_t* hashed_bootkey,
-	uint8_t* ntlmphrase,
+	const uint8_t* enc_hash,
+	const uint8_t* hashed_bootkey,
+	const uint8_t* ntlmphrase,
 	ntlm_user_t* user_info_ptr,
 	uint8_t* decrypted_hash
 );
 
 // Decrypts salted/NTLMv2 hash
 int decrypt_salted_hash(
-	uint8_t* enc_hash,
-	uint8_t* hashed_bootkey,
-	uint8_t* salt,
+	const uint8_t* enc_hash,
+	const uint8_t* hashed_bootkey,
+	const uint8_t* salt,
 	ntlm_user_t* user_info_ptr,
 	uint8_t* decrypted_hash
 );

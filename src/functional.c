@@ -31,11 +31,11 @@ char* get_random_string(size_t length)
 	if (length == 0)
 	{
 		errno = EINVAL;
-		return -1;
+		return NULL;
 	}
 
 	// Allocating string
-	char* str = malloc_check(str, length + 1, -2);
+	char* str = malloc_check(str, length + 1, NULL);
 	srand(time(NULL));
 
 	// Generating string

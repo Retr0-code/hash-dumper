@@ -60,7 +60,7 @@ const argument_t* arg_init_arg(arg_type type, const char* key, const char* descr
     if (key == NULL || description == NULL)
     {
         errno = EINVAL;
-        return arg_invalid_arg;
+        return NULL;
     }
 
     argument_t* arg_ptr = malloc_check(arg_ptr, sizeof(argument_t), NULL);
@@ -118,7 +118,7 @@ argument_t *arg_get(const char *key, arg_parser_t *parser_ptr)
     if (key == NULL || parser_ptr == NULL)
     {
         errno = EINVAL;
-        return arg_invalid_arg;
+        return NULL;
     }
 
     return ht_get_elem(key, parser_ptr->arguments);
@@ -127,7 +127,7 @@ argument_t *arg_get(const char *key, arg_parser_t *parser_ptr)
 int arg_parse(int argc, const char **argv, arg_parser_t *parser_ptr)
 {
     // Validating parameters
-    if (argc == 0 || argc == NULL || parser_ptr == NULL)
+    if (argc == 0 || argv == NULL || parser_ptr == NULL)
     {
         errno = EINVAL;
         return arg_invalid_arg;

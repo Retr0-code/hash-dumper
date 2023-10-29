@@ -57,7 +57,7 @@ uint8_t* get_md5(const char* data, size_t data_size)
 	return raw_hash;
 }
 
-int rc4_encrypt(const uint8_t* data, size_t data_len, uint8_t* key, uint8_t* enc_data)
+int rc4_encrypt(const uint8_t* data, int data_len, uint8_t* key, uint8_t* enc_data)
 {
 	// Loading legacy algorithms provider
 	OSSL_PROVIDER* legacy = OSSL_PROVIDER_load(NULL, "legacy");
