@@ -1,6 +1,6 @@
 # hash dumper
 
-Simple Windows NTLM hash dumper utility written in C language. It has support for Windows realtime dumping and Linux dumping from files.
+Windows NTLM hash dumper utility written in C language. It has support for Windows realtime dumping and Linux dumping from files.
 
 ## Responsibility
 
@@ -8,7 +8,7 @@ The author is not responsible for the actions of third parties committed while u
 
 ## Compilation
 
-For compilation required *OpenSSL >= 3.0* library. Use cmake to generate a solution for Visual Studio or Make file. Cmake requires **OPENSSL_ROOT_DIR** and **OPENSSL_LIB** variables to be set.
+For compilation required *OpenSSL >= 3.0 or OpenSSL 1.1.1* library. Use cmake to generate a solution for Visual Studio or Make file. Cmake requires **OPENSSL_ROOT_DIR** and **OPENSSL_LIB** variables to be set.
 
 ### Resources
  - [Compiling OpenSSL for Windows](https://wiki.openssl.org/index.php/Compilation_and_Installation)
