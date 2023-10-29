@@ -219,8 +219,7 @@ int main(int argc, char const *argv[])
         ascii_nthash[32] = '\0';
         ascii_lmhash[32] = '\0';
 
-        wprintf(L"%ls:%i:", user.name, user.sid);
-        printf("%s:%s:::\n", ascii_lmhash, ascii_nthash);
+        printf("%ls:%i:%s:%s:::\n", user.name, user.sid, ascii_lmhash, ascii_nthash);
         ntlm_user_destroy(&user);
     }
 
