@@ -112,7 +112,7 @@ int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey)
     }
 
     out_bootkey[RAW_BOOTKEY_LENGTH * 2] = L'\0';
-    
+
     for (size_t i = 0; i < RAW_BOOTKEY_LENGTH * 2; i++)
         out_bootkey[i] = towupper(out_bootkey[i]);
 

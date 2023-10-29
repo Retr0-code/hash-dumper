@@ -31,6 +31,7 @@
 #define IS_WINDOWS 0
 #endif
 
+
 #define PROGRAM_INFO    \
 "hash-dumper is utility for dumping NTLMv1/2 hashes from windows registry hives SAM and SYSTEM. \
 It can be used in realtime dumping mode, when hives will be dumped to temp files and then deleted, \
