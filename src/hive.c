@@ -40,10 +40,6 @@ int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr)
 	if (fread(hive_header_ptr, sizeof(hive_header_t), 1, hive_ptr) != 1)
 		return hv_read_error;
 
-#if (HV_ENDIANNESS == HV_BIG_ENDIAN)
-	hive_header_ptr->last_write_time = BYTE_SWAP64(hive_header_ptr->last_write_time);
-#endif
-
 	// Check signature
 	if (hive_header_ptr->signature != HIVE_SIGN)
 	{
@@ -87,11 +83,6 @@ int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_p
 
 	// Inverse the size
 	nk_ptr->size = 0 - nk_ptr->size;
-
-#if (HV_ENDIANNESS == HV_BIG_ENDIAN)
-	nk_ptr->flags = BYTE_SWAP16(nk_ptr->flags);
-#endif
-
 
 	nk_ptr->name = malloc_check(nk_ptr->name, nk_ptr->name_length + 1, hv_alloc_error);
 
@@ -218,10 +209,6 @@ int read_value_key(const uint32_t root_offset, FILE* hive_ptr, value_key_t* vk_p
 
 	// Inverse the size
 	vk_ptr->size = 0 - vk_ptr->size;
-
-#if (HV_ENDIANNESS == HV_BIG_ENDIAN)
-	nk_ptr->flags = BYTE_SWAP16(nk_ptr->flags);
-#endif
 
 	// If value does not have a name then it is (Default)
 	if (vk_ptr->name_length == 0)

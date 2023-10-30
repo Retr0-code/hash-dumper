@@ -142,7 +142,6 @@ int dump_users_keys(FILE* sam_hive, named_key_t** users_keys_array, size_t* user
     return 0;
 }
 
-// TODO(Complete the function)
 int dump_v_value(FILE* sam_hive, named_key_t* user_key_ptr, ntlm_user_t* user_info_ptr)
 {
     // Validating parameters
@@ -207,10 +206,12 @@ int dump_user_ntlm(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey)
         return -1;
     }
 
+    // Decrypt LM hash
     int result = decrypt_ntlm_hash(user_info_ptr, hashed_bootkey, hash_lm);
     if (result != 0)
         return -2;
 
+    // Decrypt NT hash
     result = decrypt_ntlm_hash(user_info_ptr, hashed_bootkey, hash_nt);
     if (result != 0)
         return -3;
@@ -245,74 +246,58 @@ int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey,
     }
 
     // Preparing arrays for encrypted hash and salt
+    uint8_t salt[16];
     uint8_t encrypted_hash[32];
-    uint8_t encrypted_hash_salt[16];
-    memset(encrypted_hash, 0, 32);
-    memset(encrypted_hash_salt, 0, 16);
+    memcpy(salt, hash_type ? NTPASSWORD : LMPASSWORD, 16);
+    memcpy(encrypted_hash, ((uint8_t*)user_info_ptr->v_value) + hash_offset + 4, 16);
 
     // Setting proper pointer to hash
     uint8_t* hash_pointer = hash_type ? user_info_ptr->nthash : user_info_ptr->lmhash;
-    switch (revision)
+
+    uint32_t exists_cmp = 0x14;
+    decrypt_callback_t decrypt_callback = &decrypt_ntlmv1_callback;
+    if (revision == 2)
     {
-    case 1:
-        if (hash_exists != 0x14)
-        {
-            //hash_pointer = hash_nt ? EMPTY_NT_HASH : EMPTY_LM_HASH;
-            memcpy(hash_pointer, hash_type ? EMPTY_NT_HASH : EMPTY_LM_HASH, 16);
-            return 0;
-        }
-
-        memcpy(encrypted_hash, ((uint8_t*)user_info_ptr->v_value) + hash_offset + 4, 16);
-        // Decrypt NTLMv1 Hash (without a salt)
-        if (decrypt_hash(
-            encrypted_hash,
-            hashed_bootkey,
-            hash_type ? NTPASSWORD : LMPASSWORD,
-            user_info_ptr,
-            hash_pointer
-        ) != 0)
-            return -3;
-        break;
-    case 2:
-        if (hash_exists != 0x38)
-        {
-            memcpy(hash_pointer, hash_type ? EMPTY_NT_HASH : EMPTY_LM_HASH, 16);
-            return 0;
-        }
-
-        // Reading salt and encrypted hash (offset +4 if hash type is NT)
-        memcpy(encrypted_hash_salt, (uint8_t*)user_info_ptr->v_value + hash_offset + 4 + (hash_type * 4), 16);
+        exists_cmp = 0x38;
+        decrypt_callback = &decrypt_ntlmv2_callback;
+        memcpy(salt, (uint8_t*)user_info_ptr->v_value + hash_offset + 4 + (hash_type * 4), 16);
         memcpy(encrypted_hash, (uint8_t*)user_info_ptr->v_value + hash_offset + 20 + (hash_type * 4), 32);
-
-        // Decrypt NTLMv2 Hash (with a salt)
-        if (decrypt_salted_hash(
-            encrypted_hash,
-            hashed_bootkey,
-            encrypted_hash_salt,
-            user_info_ptr,
-            hash_pointer
-        ) != 0)
-            return -4;
-
-        break;
-
-    default:
-        return -2;
     }
+
+    if (hash_exists != exists_cmp)
+    {
+        memcpy(hash_pointer, hash_type ? EMPTY_NT_HASH : EMPTY_LM_HASH, 16);
+        return 0;
+    }
+
+    if (decrypt_ntlm_hash_wrapper(
+        encrypted_hash,
+        hashed_bootkey,
+        salt,
+        user_info_ptr,
+        decrypt_callback,
+        hash_pointer
+    ) != 0)
+        return -2;
 
     return 0;
 }
 
-int decrypt_hash(
+int decrypt_ntlm_hash_wrapper(
     const uint8_t* enc_hash,
     const uint8_t* hashed_bootkey,
-    const uint8_t* ntlmphrase,
+    const uint8_t* salt,
     ntlm_user_t* user_info_ptr,
+    decrypt_callback_t ntlm_version,
     uint8_t* decrypted_hash
 )
 {
     // Validating parameters
-    if (enc_hash == NULL || hashed_bootkey == NULL || ntlmphrase == NULL || user_info_ptr == NULL || decrypted_hash == NULL)
+    if (enc_hash == NULL || hashed_bootkey == NULL ||
+        salt == NULL || user_info_ptr == NULL ||
+        decrypted_hash == NULL || ntlm_version == NULL ||
+        user_info_ptr == NULL
+        )
     {
         errno = EINVAL;
         return -1;
@@ -326,12 +311,51 @@ int decrypt_hash(
     des_key1 = BYTE_SWAP64(des_key1);
     des_key2 = BYTE_SWAP64(des_key2);
 
+    uint8_t* staged_hash = malloc_check(staged_hash, 32, -3);
+    {
+        int result = (*ntlm_version)(enc_hash, hashed_bootkey, salt, user_info_ptr, staged_hash);
+        if (result != 0)
+        {
+            errno = EBADF;
+            free(staged_hash);
+            return result;
+        }
+    }
+
+    uint8_t* des_key = &des_key1;
+    for (size_t i = 0; i < 16; i += sizeof(uint64_t), des_key = &des_key2)
+    {
+        if (des_ecb_decrypt(staged_hash + i, sizeof(uint64_t), des_key, decrypted_hash + i) == 0)
+        {
+            free(staged_hash);
+            return -6;
+        }
+    }
+
+    return 0;
+}
+
+int decrypt_ntlmv1_callback(
+    const uint8_t* encrypted_hash,
+    const uint8_t* hashed_bootkey,
+    const uint8_t* salt,
+    const ntlm_user_t* user_info_ptr,
+    uint8_t* output
+)
+{
+    // Validating parameters
+    if (encrypted_hash == NULL || hashed_bootkey == NULL || salt == NULL || output == NULL || user_info_ptr == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
     // Constructing full data for RC4 key
-    size_t ntlmphrase_len = strlen(ntlmphrase) + 1;
+    size_t ntlmphrase_len = strlen(salt) + 1;
     uint8_t* full_data = malloc_check(full_data, 16 + sizeof(uint32_t) + ntlmphrase_len, -3);
     memcpy(full_data, hashed_bootkey, 16);
     memcpy(full_data + 16, &user_info_ptr->sid, sizeof(uint32_t));
-    memcpy(full_data + 16 + sizeof(uint32_t), ntlmphrase, ntlmphrase_len);
+    memcpy(full_data + 16 + sizeof(uint32_t), output, ntlmphrase_len);
 
     // MD5 of the data will be RC4 key
     uint8_t* md5_hash = get_md5(full_data, 16 + sizeof(uint32_t) + ntlmphrase_len);
@@ -341,65 +365,32 @@ int decrypt_hash(
         return -4;
     }
 
-    uint8_t pre_des_hash[32];
-    if (rc4_encrypt(enc_hash, 16, md5_hash, pre_des_hash) == 0)
+    if (rc4_encrypt(encrypted_hash, 16, md5_hash, output) == 0)
     {
         cleanup_pointers(2, full_data, md5_hash);
         return -5;
     }
 
-    uint8_t* des_key = &des_key1;
-    for (size_t i = 0; i < 16; i += sizeof(uint64_t), des_key = &des_key2)
-    {
-        if (des_ecb_decrypt(pre_des_hash + i, sizeof(uint64_t), des_key, decrypted_hash + i) == 0)
-        {
-            free(pre_des_hash);
-            return -6;
-        }
-    }
-
     return 0;
 }
 
-int decrypt_salted_hash(
-    const uint8_t* enc_hash,
+int decrypt_ntlmv2_callback(
+    const uint8_t* encrypted_hash,
     const uint8_t* hashed_bootkey,
     const uint8_t* salt,
-    ntlm_user_t* user_info_ptr,
-    uint8_t* decrypted_hash
+    const ntlm_user_t* user_info_ptr,
+    uint8_t* output
 )
 {
     // Validating parameters
-    if (enc_hash == NULL || hashed_bootkey == NULL || salt == NULL || user_info_ptr == NULL || decrypted_hash == NULL)
+    if (encrypted_hash == NULL || hashed_bootkey == NULL || salt == NULL || output == NULL || user_info_ptr == NULL)
     {
         errno = EINVAL;
         return -1;
     }
 
-    uint64_t des_key1 = 0;
-    uint64_t des_key2 = 0;
-    if (sid_to_des_keys(user_info_ptr->sid, &des_key1, &des_key2) != 0)
+    if (aes_128_cbc_decrypt(encrypted_hash, 32, hashed_bootkey, salt, output) == 0)
         return -2;
-
-    des_key1 = BYTE_SWAP64(des_key1);
-    des_key2 = BYTE_SWAP64(des_key2);
-
-    uint8_t* pre_des_hash = malloc_check(pre_des_hash, 32, -3);
-    if (aes_128_cbc_decrypt(enc_hash, 32, hashed_bootkey, salt, pre_des_hash) == 0)
-    {
-        free(pre_des_hash);
-        return -4;
-    }
-
-    uint8_t* des_key = &des_key1;
-    for (size_t i = 0; i < 16; i += sizeof(uint64_t), des_key = &des_key2)
-    {
-        if (des_ecb_decrypt(pre_des_hash + i, sizeof(uint64_t), des_key, decrypted_hash + i) == 0)
-        {
-            free(pre_des_hash);
-            return -6;
-        }
-    }
 
     return 0;
 }

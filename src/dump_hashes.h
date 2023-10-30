@@ -22,13 +22,12 @@
 #include "hive.h"
 #include "crypto.h"
 
-//#include "own_des.h"
-
 #define EMPTY_LM_HASH	"\xaa\xd3\xb4\x35\xb5\x14\x04\xee\xaa\xd3\xb4\x35\xb5\x14\x04\xee"
 #define EMPTY_NT_HASH	"\x31\xd6\xcf\xe0\xd1\x6a\xe9\x31\xb7\x3c\x59\xd7\xe0\xc0\x89\xc0"
 #define NTPASSWORD		"NTPASSWORD"
 #define LMPASSWORD		"LMPASSWORD"
 
+// Structs that contains main user info
 typedef struct
 {
 	uint32_t sid;
@@ -39,11 +38,21 @@ typedef struct
 	uint8_t* lmhash;
 } ntlm_user_t;
 
+// Enumeration of hash types
 typedef enum
 {
 	hash_lm,
 	hash_nt
 } hash_type_e;
+
+// Type for callback function of staged decryption
+typedef int (*decrypt_callback_t)(
+	const uint8_t* encrypted_hash,
+	const uint8_t* hashed_bootkey,
+	const uint8_t* salt,
+	const ntlm_user_t* user_info_ptr,
+	uint8_t* output
+	);
 
 int ntlm_user_init(ntlm_user_t* user_info_ptr);
 
@@ -64,22 +73,32 @@ int dump_user_ntlm(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey);
 // Decrypts NT/LM hash
 int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey, const hash_type_e hash_type);
 
-// Decrypts non-salted/NTLMv1 hash
-int decrypt_hash(
-	const uint8_t* enc_hash,
-	const uint8_t* hashed_bootkey,
-	const uint8_t* ntlmphrase,
-	ntlm_user_t* user_info_ptr,
-	uint8_t* decrypted_hash
-);
-
-// Decrypts salted/NTLMv2 hash
-int decrypt_salted_hash(
+// Decrypt NTLMv1/2 hashes using callback function
+int decrypt_ntlm_hash_wrapper(
 	const uint8_t* enc_hash,
 	const uint8_t* hashed_bootkey,
 	const uint8_t* salt,
 	ntlm_user_t* user_info_ptr,
+	decrypt_callback_t ntlm_version,
 	uint8_t* decrypted_hash
+);
+
+// Callback function for decrypt_ntlm_hash_wrapper, which does staged decryption of NTLMv1
+int decrypt_ntlmv1_callback(
+	const uint8_t* encrypted_hash,
+	const uint8_t* hashed_bootkey,
+	const uint8_t* salt,
+	const ntlm_user_t* user_info_ptr,
+	uint8_t* output
+);
+
+// Callback function for decrypt_ntlm_hash_wrapper, which does staged decryption of NTLMv2
+int decrypt_ntlmv2_callback(
+	const uint8_t* encrypted_hash,
+	const uint8_t* hashed_bootkey,
+	const uint8_t* salt,
+	const ntlm_user_t* user_info_ptr,
+	uint8_t* output
 );
 
 // Converts RID to DES keys
