@@ -1,6 +1,25 @@
-# hash dumper
+# [NTLMv1/2 Hash Dumper](https://github.com/Retr0-code/hash-dumper)
 
 Windows NTLM hash dumper utility written in C language. It has support for Windows realtime dumping and Linux dumping from files.
+
+[![GitHub issues](https://img.shields.io/github/issues/Retr0-code/hash-dumper?labelColor=44E26E&color=505050)](https://github.com/Retr0-code/hash-dumper/issues?q=is%3Aopen+is%3Aissue)
+[![GitHub closed issues](https://img.shields.io/github/issues-closed/Retr0-code/hash-dumper?labelColor=40D668&color=505050)](https://github.com/Retr0-code/hash-dumper/issues?q=is%3Aissue+is%3Aclosed)
+[![GitHub release (latest by SemVer including pre-releases)](https://img.shields.io/github/downloads-pre/Retr0-code/hash-dumper/latest/total?labelColor=32a852&color=505050)](https://github.com/Retr0-code/hash-dumper/releases/latest)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/Retr0-code/hash-dumper?labelColor=288541&color=505050)](https://github.com/Retr0-code/hash-dumper/pulls)
+
+[![GitHub License](https://img.shields.io/github/license/Retr0-code/hash-dumper?labelColor=6967A6&color=505050)](https://github.com/Retr0-code/hash-dumper/blob/main/LICENSE.txt)
+[![GitHub commit activity (branch)](https://img.shields.io/github/commit-activity/t/Retr0-code/hash-dumper?labelColor=525182&color=505050)](https://github.com/Retr0-code/hash-dumper/commits/main)
+
+![Linux support](https://img.shields.io/badge/Linux-Unsupported-505050?labelColor=8C0842)
+![NTLMv1](https://img.shields.io/badge/NTLMv1-Supported-505050?labelColor=B00B53)
+![NTLMv2](https://img.shields.io/badge/NTLMv2-Supported-505050?labelColor=DE0D68)
+
+
+## Table of content
+
+ - [Responsibility](README.md#Responsibility)
+ - [Compilation](README.md#Compilation)
+ - [Manual](README.md#Manual)
 
 ## Responsibility
 
@@ -10,9 +29,11 @@ The author is not responsible for the actions of third parties committed while u
 
 For compilation required *OpenSSL >= 3.0 or OpenSSL 1.1.1* library. Use cmake to generate a solution for Visual Studio or Make file. Cmake requires **OPENSSL_ROOT_DIR** and **OPENSSL_LIB** variables to be set.
 
-### Resources
+**If You have chosen OpenSSL >= 3.0 You have to compile legacy provider for RC4 and DES**
+
  - [Compiling OpenSSL for Windows](https://wiki.openssl.org/index.php/Compilation_and_Installation)
  - [Running CMake with OpenSSL](https://stackoverflow.com/a/45548831)
+ - [How to enable legacy provider?](https://github.com/openssl/openssl/issues/20112)
 
 ## Manual
 
@@ -50,4 +71,4 @@ sandbox:1002:aad3b435b51404eeaad3b435b51404ee:67b6acadb87c12e9d84e6e73b6883601::
 [+] Successfully finished
 ```
 
-**If You supply all parameters only ** `--realtime` ** will work.**
+**If You supply all parameters only `--realtime` will work.**
