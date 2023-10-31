@@ -249,7 +249,7 @@ int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey,
     uint8_t salt[16];
     uint8_t encrypted_hash[32];
     memcpy(salt, hash_type ? NTPASSWORD : LMPASSWORD, 16);
-    memcpy(encrypted_hash, ((uint8_t*)user_info_ptr->v_value) + hash_offset + 4, 16);
+    memcpy(encrypted_hash, ((uint8_t*)user_info_ptr->v_value) + hash_offset + 4, strlen(NTPASSWORD) + 1);
 
     // Setting proper pointer to hash
     uint8_t* hash_pointer = hash_type ? user_info_ptr->nthash : user_info_ptr->lmhash;
