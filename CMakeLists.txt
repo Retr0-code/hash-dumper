@@ -6,9 +6,6 @@ project(hash-dumper
     HOMEPAGE_URL "https://github.com/Retr0-code/hash-dumper"
 )
 
-# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fshort-wchar")
-add_compile_options(-fshort-wchar)
-
 set(EXEC_SRC
     src/main.c
     src/hive.c
