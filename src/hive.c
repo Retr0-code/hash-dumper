@@ -435,7 +435,7 @@ void* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr)
 	return value;
 }
 
-wchar_t* reg_get_class(named_key_t* nk_ptr, FILE* hive_ptr)
+char16_t* reg_get_class(named_key_t* nk_ptr, FILE* hive_ptr)
 {
     // Validating parameters
 	if (nk_ptr == NULL || hive_ptr == NULL)
@@ -461,7 +461,7 @@ wchar_t* reg_get_class(named_key_t* nk_ptr, FILE* hive_ptr)
 	nk_ptr->class_length = 0 - nk_ptr->class_length;
 
 	// Allocating space for a value
-	wchar_t* class_value = malloc_check(class_value, nk_ptr->class_length, NULL);
+	char16_t* class_value = malloc_check(class_value, nk_ptr->class_length, NULL);
 
 	// Reading value
 	if (fread(class_value, nk_ptr->class_length, 1, hive_ptr) != 1)

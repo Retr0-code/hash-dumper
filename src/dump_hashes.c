@@ -190,9 +190,9 @@ int dump_user_name(ntlm_user_t* user_info_ptr)
     memcpy(&name_length, ((const char*)user_info_ptr->v_value) + 0x10, sizeof(uint32_t));
     name_offset += 0xCC;
 
-    user_info_ptr->name = malloc_check(user_info_ptr->name, name_length + 2, -2);
+    user_info_ptr->name = malloc_check(user_info_ptr->name, name_length + sizeof(char16_t), -2);
     memcpy(user_info_ptr->name, (const char*)user_info_ptr->v_value + name_offset, name_length);
-    user_info_ptr->name[name_length >> 1] = L'\0';
+    user_info_ptr->name[name_length >> 1] = u'\0';
 
     return 0;
 }

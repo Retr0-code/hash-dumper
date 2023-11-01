@@ -163,7 +163,7 @@ uint8_t* get_md5(const char* data, size_t data_size)
 		return NULL;
 	}
 
-	uint8_t hash = malloc_check(hash, 16, NULL);
+	uint8_t* hash = malloc_check(hash, 16, NULL);
 
 	MD5_CTX context;
 	MD5_Init(&context);
@@ -173,7 +173,7 @@ uint8_t* get_md5(const char* data, size_t data_size)
 	return hash;
 }
 
-int rc4_encrypt(const uint8_t* data, size_t data_len, uint8_t* key, uint8_t* enc_data)
+int rc4_encrypt(const uint8_t* data, int data_len, uint8_t* key, uint8_t* enc_data)
 {
 	// Validating parameters
 	if (data == NULL || data_len == 0 || key == NULL || enc_data == NULL)

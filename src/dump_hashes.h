@@ -16,6 +16,7 @@
 #ifndef DUMP_HASHES_H
 #define DUMP_HASHES_H
 
+#include <uchar.h>
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -33,7 +34,7 @@ typedef struct
 	uint32_t sid;
 	size_t v_size;
 	void* v_value;
-	wchar_t* name;
+	char16_t* name;
 	uint8_t* nthash;
 	uint8_t* lmhash;
 } ntlm_user_t;

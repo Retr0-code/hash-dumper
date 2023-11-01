@@ -23,7 +23,7 @@
 
 #include "dump_bootkey.h"
 
-int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey)
+int dump_bootkey(FILE* sys_hive, char16_t* out_bootkey)
 {
     // Validating parameters
     if (sys_hive == NULL || out_bootkey == NULL)
@@ -79,7 +79,7 @@ int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey)
 
     // List of named keys to construct the bootkey
     const char* lsa_values[4] = {"JD", "Skew1", "GBG", "Data"};
-    wchar_t* bootkey_part = NULL;
+    char16_t* bootkey_part = NULL;
     reg_path_t* reg_endpoint_path;
     for (size_t i = 0; i < 4; i++)
     {
@@ -107,7 +107,7 @@ int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey)
         }
 
         // Constructing full bootkey
-        memcpy(out_bootkey + i * 16 / sizeof(wchar_t), bootkey_part, 16);
+        memcpy(out_bootkey + i * 16 / sizeof(char16_t), bootkey_part, 16);
         free(bootkey_part);
     }
 
@@ -120,7 +120,7 @@ int dump_bootkey(FILE* sys_hive, wchar_t* out_bootkey)
     return 0;
 }
 
-int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hashed_bootkey)
+int get_hashed_bootkey(const char16_t* u16_bootkey, FILE* sam_hive, uint8_t* hashed_bootkey)
 {
     // Validating parameters
     if (u16_bootkey == NULL || hashed_bootkey == NULL)
@@ -151,11 +151,11 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hash
     // Allocating hive header
     hive_header_t* hive_header_ptr = malloc_check(hive_header_ptr, sizeof(hive_header_t), -3);
     // Allocating base named key
-    named_key_t* base_nk_ptr = malloc_check_clean(base_nk_ptr, sizeof(named_key_t), -4, 1, hive_header_ptr);
+    named_key_t* base_nk_ptr = malloc_check_clean(base_nk_ptr, sizeof(named_key_t), -4, 2, hive_header_ptr, raw_bootkey);
 
     if (hive_get_root(sam_hive, hive_header_ptr, base_nk_ptr) != hv_success)
     {
-        cleanup_pointers(2, hive_header_ptr, base_nk_ptr);
+        cleanup_pointers(3, hive_header_ptr, raw_bootkey, base_nk_ptr);
         return -5;
     }
 
@@ -163,7 +163,7 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hash
 
     if (reg_accounts_path == NULL)
     {
-        cleanup_pointers(3, hive_header_ptr, base_nk_ptr, reg_accounts_path);
+        cleanup_pointers(4, hive_header_ptr, raw_bootkey, base_nk_ptr, reg_accounts_path);
         return -6;
     }
 
@@ -171,8 +171,9 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hash
     named_key_t* accounts_nk_ptr = malloc_check_clean(
         accounts_nk_ptr,
         sizeof(named_key_t),
-        -7, 3,
+        -7, 4,
         hive_header_ptr,
+        raw_bootkey,
         base_nk_ptr,
         reg_accounts_path
     );
@@ -180,7 +181,7 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hash
     // Enumerating named key by specified path
     if (reg_enum_subkey(base_nk_ptr, reg_accounts_path, sam_hive, accounts_nk_ptr) != 0)
     {
-        cleanup_pointers(4, hive_header_ptr, base_nk_ptr, reg_accounts_path, accounts_nk_ptr);
+        cleanup_pointers(5, hive_header_ptr, raw_bootkey, base_nk_ptr, reg_accounts_path, accounts_nk_ptr);
         return -8;
     }
 
@@ -188,8 +189,9 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hash
     value_key_t* f_value_ptr = malloc_check_clean(
         f_value_ptr,
         sizeof(value_key_t),
-        -9, 4,
+        -9, 5,
         hive_header_ptr,
+        raw_bootkey,
         base_nk_ptr,
         reg_accounts_path,
         accounts_nk_ptr
@@ -198,7 +200,11 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hash
     // Reading "F" value
     if (reg_enum_value(accounts_nk_ptr, "F", sam_hive, f_value_ptr) != 0)
     {
-        cleanup_pointers(5, hive_header_ptr, base_nk_ptr, reg_accounts_path, accounts_nk_ptr, f_value_ptr);
+        cleanup_pointers(6,
+            hive_header_ptr, raw_bootkey,
+            base_nk_ptr, reg_accounts_path,
+            accounts_nk_ptr, f_value_ptr
+        );
         return -10;
     }
 
@@ -206,7 +212,11 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hash
     uint8_t* f_value = reg_get_value(f_value_ptr, sam_hive);
     if (f_value == NULL)
     {
-        cleanup_pointers(5, hive_header_ptr, base_nk_ptr, reg_accounts_path, accounts_nk_ptr, f_value_ptr);
+        cleanup_pointers(6, 
+            hive_header_ptr, raw_bootkey,
+            base_nk_ptr, reg_accounts_path,
+            accounts_nk_ptr, f_value_ptr
+        );
         return -11;
     }
 
@@ -227,22 +237,34 @@ int get_hashed_bootkey(const wchar_t* u16_bootkey, FILE* sam_hive, uint8_t* hash
     // Checking if read data is valid
     if (hash_function == NULL)
     {
-        cleanup_pointers(6, hive_header_ptr, base_nk_ptr, reg_accounts_path, accounts_nk_ptr, f_value_ptr, f_value);
+        cleanup_pointers(7, 
+            hive_header_ptr, raw_bootkey,
+            base_nk_ptr, reg_accounts_path,
+            accounts_nk_ptr, f_value_ptr, f_value
+        );
         return -12;
     }
 
     // Hashing bootkey
     if ((*hash_function)(permutated_bootkey, f_value, hashed_bootkey) != 0)
     {
-        cleanup_pointers(6, hive_header_ptr, base_nk_ptr, reg_accounts_path, accounts_nk_ptr, f_value_ptr, f_value);
+        cleanup_pointers(7,
+            hive_header_ptr, raw_bootkey,
+            base_nk_ptr, reg_accounts_path,
+            accounts_nk_ptr, f_value_ptr, f_value
+        );
         return -13;
     }
 
-    cleanup_pointers(6, hive_header_ptr, base_nk_ptr, reg_accounts_path, accounts_nk_ptr, f_value_ptr, f_value);
+    cleanup_pointers(7, 
+        hive_header_ptr, raw_bootkey,
+        base_nk_ptr, reg_accounts_path,
+        accounts_nk_ptr, f_value_ptr, f_value
+    );
     return 0;
 }
 
-uint8_t* bootkey_from_u16(const wchar_t* wstr)
+uint8_t* bootkey_from_u16(const char16_t* wstr)
 {
     // Validating parameter
     if (wstr == NULL)
@@ -252,7 +274,9 @@ uint8_t* bootkey_from_u16(const wchar_t* wstr)
     }
 
     // Checking a bootkey length
-    size_t wstr_length = wcslen(wstr);
+    size_t wstr_length = 0;
+    while (wstr[wstr_length++]);
+    --wstr_length;
     if (wstr_length != RAW_BOOTKEY_LENGTH * 2)
     {
         errno = EBADF;
@@ -260,7 +284,7 @@ uint8_t* bootkey_from_u16(const wchar_t* wstr)
     }
 
     // Raw bootkey data array
-    uint8_t bootkey_decoded[RAW_BOOTKEY_LENGTH];
+    uint8_t* bootkey_decoded = malloc_check(bootkey_decoded, RAW_BOOTKEY_LENGTH, NULL);
     for (size_t i = 0; i < RAW_BOOTKEY_LENGTH; i++)
     {
         uint8_t fh = (*(wstr + (i << 1)) & 0x00ff);        // Taking first 4 bits of an integer

@@ -14,6 +14,7 @@
 */
 
 #include <errno.h>
+#include <uchar.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -21,6 +22,7 @@
 #include <locale.h>
 
 #include "arg_parser.h"
+#include "functional.h"
 #include "dump_hives.h"
 #include "dump_hashes.h"
 #include "dump_bootkey.h"
@@ -146,7 +148,7 @@ int main(int argc, char const *argv[])
 
     puts("[+] Hives successfully opened");
 
-    wchar_t boot_key_hex[33];
+    char16_t boot_key_hex[33];
     {
         int result = dump_bootkey(system_hive, boot_key_hex);
         if (result != 0)
@@ -157,8 +159,13 @@ int main(int argc, char const *argv[])
             return -1;
         }
     }
-
+#ifdef __linux__
+    wchar_t* boot_key_hex32 = u16_to_u32(boot_key_hex);
+    printf("[+] Successfully dumped bootkey: %ls\n", boot_key_hex32);
+    free(boot_key_hex32);
+#else
     printf("[+] Successfully dumped bootkey: %ls\n", boot_key_hex);
+#endif
 
     uint8_t hashed_bootkey[0x20];
     memset(hashed_bootkey, 0, 0x20);
@@ -166,7 +173,7 @@ int main(int argc, char const *argv[])
         int result = get_hashed_bootkey(boot_key_hex, sam_hive, hashed_bootkey);
         if (result != 0)
         {
-            printf("[-] Failed to get hashed bootkey: %08x\n", result);
+            printf("[-] Failed to get hashed bootkey: 0x%08x\n", result);
             close_hives(&system_hive, &sam_hive, delete_hives);
             return -1;
         }
@@ -220,7 +227,19 @@ int main(int argc, char const *argv[])
         ascii_nthash[32] = '\0';
         ascii_lmhash[32] = '\0';
 
+#ifdef __linux__
+        wchar_t* user_name = u16_to_u32(user.name);
+        if (user_name == NULL)
+        {
+            printf("[-] Unable to convert username with sid: %i\n", user.sid);
+            user_name = L"Unknown";
+        }
+
+        printf("%ls:%i:%s:%s:::\n", user_name, user.sid, ascii_lmhash, ascii_nthash);
+        free(user_name);
+#else
         printf("%ls:%i:%s:%s:::\n", user.name, user.sid, ascii_lmhash, ascii_nthash);
+#endif
         ntlm_user_destroy(&user);
     }
 

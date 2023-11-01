@@ -19,6 +19,7 @@
 #include <time.h>
 #include <errno.h>
 #include <stdio.h>
+#include <uchar.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdarg.h>
@@ -62,6 +63,7 @@ if (ptr_name == NULL) \
 	return status; \
 }
 
+
 // Deallocates pointers (if amount of pointers are odd then you have to pass aditional NULL)
 void cleanup_pointers(size_t amount, ...);
 
@@ -69,5 +71,11 @@ void cleanup_pointers(size_t amount, ...);
 char* get_random_string(size_t length);
 
 void bytes_to_hex(uint8_t* input, size_t length, char* output);
+
+#ifdef __linux__
+
+wchar_t* u16_to_u32(const char16_t* u16_input_str);
+
+#endif
 
 #endif

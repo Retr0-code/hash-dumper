@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include <uchar.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -117,7 +118,7 @@ typedef PACK(struct hive_header_t
 	uint64_t padding2;			// Random padding
 	uint32_t root_offset;		// Specifies an relative root's offset of containers
 	uint32_t size;				// Amount of hbins in hive
-	wchar_t name[255];			// Hive name
+	char16_t name[255];			// Hive name
 }) hive_header_t;
 
 
@@ -272,7 +273,7 @@ int reg_enum_value(const named_key_t* base_nk_ptr, const char* value_name, FILE*
 void* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr);
 
 // Returns class value of specified key
-wchar_t* reg_get_class(named_key_t* nk_ptr, FILE* hive_ptr);
+char16_t* reg_get_class(named_key_t* nk_ptr, FILE* hive_ptr);
 
 // Sets file cursor from beggining to 0x1000 + root_offset
 int hive_file_seek(FILE* hive_ptr, const uint32_t root_offset);
