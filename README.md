@@ -1,6 +1,6 @@
 # [NTLMv1/2 Hash Dumper](https://github.com/Retr0-code/hash-dumper)
 
-Windows NTLM hash dumper utility written in C language, that supports Windows and Linux.
+Windows NTLM hash dump utility written in C language, that supports Windows and Linux.
 
 **Hash dumper** has got 2 modes:
  - *Realtime mode* (only for windows);
@@ -22,16 +22,16 @@ Windows NTLM hash dumper utility written in C language, that supports Windows an
 ## Table of content
 
  - [Responsibility](README.md#Responsibility)
- - [Compilation](README.md#Compilation)
+ - [Building the project](README.md#Building%20the%20project)
  - [Manual](README.md#Manual)
 
 ## Responsibility
 
 The author is not responsible for the actions of third parties committed while using the provided software. This software is regarded as a tool for legal penetration testing or conducting research. In case of misuse, the author does not bear any responsibility for the actions of third parties.
 
-## Compilation
+## Building the project
 
-For compilation required *OpenSSL >= 3.0 or OpenSSL 1.1.1* library. Use cmake to generate a solution for Visual Studio or Make file. If CMake cannot find OpenSSL, than set **OPENSSL_ROOT_DIR** and **OPENSSL_LIB_DIR** variables.
+For building required *OpenSSL >= 3.0 or OpenSSL 1.1.1* library. Use cmake to generate a solution for Visual Studio or Make file. If CMake cannot find OpenSSL, than set **OPENSSL_ROOT_DIR** and **OPENSSL_LIB_DIR** variables.
 
 **If OpenSSL >= 3.0 was chosen, than legacy provider have to be compiled for RC4 and DES**
 
