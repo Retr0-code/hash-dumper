@@ -22,7 +22,7 @@ Windows NTLM hash dump utility written in C language, that supports Windows and 
 ## Table of content
 
  - [Responsibility](README.md#Responsibility)
- - [Building the project](README.md#Building%20the%20project)
+ - [Building the project](README.md#building-the-project)
  - [Manual](README.md#Manual)
 
 ## Responsibility
