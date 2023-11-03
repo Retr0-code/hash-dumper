@@ -122,7 +122,7 @@ int main(int argc, char const *argv[])
         int res = resolve_temp_paths();
         if (res != 0)
         {
-            printf("[-] Unable to save temp hives files 0x08%x\n", res);
+            printf("[-] Unable to save temp hives files 0x%08x\n", res);
             arg_parser_delete(arg_parser);
             return -1;
         }

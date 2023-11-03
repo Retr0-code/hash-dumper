@@ -13,6 +13,10 @@
 	This header describes functions for linux integration and utilitarian functions
 */
 
+/*! \file functional.h
+ *	\brief This header describes functions for linux integration and utilitarian functions.
+ */
+
 #ifndef FUNCTIONAL_H
 #define FUNCTIONAL_H
 
@@ -20,6 +24,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <uchar.h>
+#include <wchar.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdarg.h>
@@ -27,7 +32,6 @@
 
 #if defined(__linux__) || defined(__unix__)
 
-#include <wchar.h>
 #include <byteswap.h>
 
 typedef unsigned long long errno_t;
@@ -63,17 +67,34 @@ if (ptr_name == NULL) \
 	return status; \
 }
 
-
-// Deallocates pointers (if amount of pointers are odd then you have to pass aditional NULL)
+/*! \fn void cleanup_pointers(size_t amount, ...)
+ *	\brief Deallocates pointers of specified amount.
+ *	\param[in] amount	amount of specified pointers.
+ *	\param[in] ...		pointers variadic list.
+ */
 void cleanup_pointers(size_t amount, ...);
 
-// Generates random string of specified length
+/*! \fn char* get_random_string(size_t length)
+ *	\brief Generates random ASCII string of specified length.
+ *	\param[in] length	length of ASCII string.
+ */
 char* get_random_string(size_t length);
 
+/*! \fn void bytes_to_hex(uint8_t* input, size_t length, char* output)
+ *	\brief Converts array of bytes to ASCII hexadecimal string.
+ *	\param[in] input	array of uint8_t (bytes).
+ *	\param[in] length	length of bytes meant to be read.
+ *	\param[out] output	ASCII hexadecimal string.
+ */
 void bytes_to_hex(uint8_t* input, size_t length, char* output);
 
 #ifdef __linux__
 
+/*! \fn wchar_t* u16_to_u32(const char16_t* u16_input_str)
+ *	\brief Converts UTF-16 string to UTF-32 string.
+ *	\param[in] u16_input_str	UTF-16 const string (must have NULL terminator in the end).
+ *	\return	linux UTF-32 wchar_t string or NULL on error.
+ */
 wchar_t* u16_to_u32(const char16_t* u16_input_str);
 
 #endif

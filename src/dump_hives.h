@@ -13,6 +13,9 @@
 	This header describes functions for working with low-level hives in windows registry
 */
 
+/*! \file dump_hives.h
+ *	\brief This header describes functions for working with low-level hives in windows registry
+ */
 #ifndef HASH_DUMP_H
 #define HASH_DUMP_H
 
@@ -31,22 +34,49 @@ typedef wchar_t* LPCTSTR;
 
 #define HIVE_NAME_LENGTH 12
 
-// Sets paths to hives
+/*! \fn void set_paths(const char* sys_hive_path, const char* sam_hive_path)
+ *	\brief Sets \a system_hive_filepath and \a sam_hive_filepath static variables to specified values.
+ *	\param[in] sys_hive_path	ASCII string of path to saved SYSTEM hive file.
+ *	\param[in] sam_hive_path	ASCII string of path to saved SAM hive file.
+ */
 void set_paths(const char* sys_hive_path, const char* sam_hive_path);
 
-// Resolves %temp% paths and sets static variables
+/*! \fn int resolve_temp_paths()
+ *	\brief Resolves %temp% paths and sets system_hive_filepath and sam_hive_filepath static variables to specified values.
+ */
 int resolve_temp_paths();
 
-// Opens files and writes pointers to specified parameters
+/*! \fn int resolve_temp_paths()
+ *	\brief Opens files and writes file descriptor pointers to specified parameters.
+ *	\param[out] system_hive		constructs file descriptor to SYSTEM hive file using path from \a system_hive_filepath.
+ *	\param[out] sam_hive		constructs file descriptor to SAM hive file using path from \a sam_hive_filepath.
+ *	\return 0 on success or negative numbers correlated to steps of function.
+ */
 int open_hives(FILE** system_hive, FILE** sam_hive);
 
-// Deletes files and closes handles
+/*! \fn void close_hives(FILE** system_hive, FILE** sam_hive, int delete_hives)
+ *	\brief Closes handles and deletes.
+ *	\param[in] system_hive		constructs file descriptor to SYSTEM hive file using path from \a system_hive_filepath.
+ *	\param[in] sam_hive			constructs file descriptor to SAM hive file using path from \a sam_hive_filepath.
+ *	\param[in] delete_hives		if value not 0 deletes hives files.
+ */
 void close_hives(FILE** system_hive, FILE** sam_hive, int delete_hives);
 
-// Saves registry hive
+/*! \fn static int reg_save_key(const char* key_name, const char* save_to)
+ *	\brief Wrapper for WinAPI RegSaveKey function.
+ *	\param[in] key_name		registry path to node.
+ *	\param[in] save_to		path to saving directory.
+ *	\return 0 on success or negative numbers correlated to steps of function.
+ */
 static int reg_save_key(const char* key_name, const char* save_to);
 
-// Sets windows privilege to process
+/*! \fn static int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable)
+ *	\brief Sets windows privilege to process
+ *	\param[in] token_handle		handle to a process privilege token.
+ *	\param[in] privilege		name of a privilege.
+ *	\param[in] enable			indicates if enable or disable the privilege.
+ *	\return 0 on success or negative numbers correlated to steps of function.
+ */
 static int enable_privilege(HANDLE token_handle, LPCTSTR privilege, BOOL enable);
 
 #endif

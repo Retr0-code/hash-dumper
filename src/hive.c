@@ -95,6 +95,7 @@ int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_p
 
 int read_subkey_list(const uint32_t root_offset, FILE* hive_ptr, fast_leaf_t* lf_ptr)
 {
+	// Validating parameters
 	if (root_offset == 0 || hive_ptr == NULL || lf_ptr == NULL)
 	{
 		errno = EINVAL;
@@ -319,6 +320,7 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 		{
 			embedded_nk_offset = sub_keys.elements[lf_index].node_offset;
 			
+			// Deallocating name of temp NK
 			if (out_nk_ptr->name != NULL)
 				free(out_nk_ptr->name);
 
