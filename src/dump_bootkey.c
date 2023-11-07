@@ -26,11 +26,7 @@
 int dump_bootkey(FILE* sys_hive, char16_t* out_bootkey)
 {
     // Validating parameters
-    if (sys_hive == NULL || out_bootkey == NULL)
-    {
-        errno = EINVAL;
-        return -1;
-    }
+    validate_parameters(sys_hive == NULL || out_bootkey == NULL, -1);
 
     // Allocating hive header
     hive_header_t* hive_header_ptr = malloc_check(hive_header_ptr, sizeof(hive_header_t), -2);
@@ -123,11 +119,7 @@ int dump_bootkey(FILE* sys_hive, char16_t* out_bootkey)
 int get_hashed_bootkey(const char16_t* u16_bootkey, FILE* sam_hive, uint8_t* hashed_bootkey)
 {
     // Validating parameters
-    if (u16_bootkey == NULL || hashed_bootkey == NULL)
-    {
-        errno = EINVAL;
-        return -1;
-    }
+    validate_parameters(u16_bootkey == NULL || hashed_bootkey == NULL, -1);
 
     // Decoding hex string to raw values
     uint8_t* raw_bootkey = bootkey_from_u16(u16_bootkey);
@@ -264,14 +256,10 @@ int get_hashed_bootkey(const char16_t* u16_bootkey, FILE* sam_hive, uint8_t* has
     return 0;
 }
 
-uint8_t* bootkey_from_u16(const char16_t* wstr)
+static uint8_t* bootkey_from_u16(const char16_t* wstr)
 {
     // Validating parameter
-    if (wstr == NULL)
-    {
-        errno = EINVAL;
-        return NULL;
-    }
+    validate_parameters(wstr == NULL, NULL);
 
     // Checking a bootkey length
     size_t wstr_length = 0;
@@ -305,11 +293,7 @@ uint8_t* bootkey_from_u16(const char16_t* wstr)
 int ntlmv1_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* hashed_bootkey)
 {
     // Validating parameters
-    if (permutated_bootkey == NULL || f_value == NULL || hashed_bootkey == NULL)
-    {
-        errno = EINVAL;
-        return -1;
-    }
+    validate_parameters(permutated_bootkey == NULL || f_value == NULL || hashed_bootkey == NULL, -1);
 
     // Constants for hashed bootkey construction
     const char* aqwerty = "!@#$%^&*()qwertyUIOPAzxcvbnmQQQQQQQQQQQQ)(*@&%\0";
@@ -352,11 +336,7 @@ int ntlmv1_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* 
 int ntlmv2_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* hashed_bootkey)
 {
     // Validating parameters
-    if (permutated_bootkey == NULL || f_value == NULL || hashed_bootkey == NULL)
-    {
-        errno = EINVAL;
-        return -1;
-    }
+    validate_parameters(permutated_bootkey == NULL || f_value == NULL || hashed_bootkey == NULL, -1);
 
     // Allocating space for IV taken from F[0x78:0x88] and encrypted bootkey taken from F[0x88:0xA8]
     uint8_t* iv = malloc_check(iv, AES_BLOCK_SIZE, -3);

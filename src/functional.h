@@ -67,6 +67,12 @@ if (ptr_name == NULL) \
 	return status; \
 }
 
+#define validate_parameters(condition, error) if ((condition))\
+{ \
+	errno = EINVAL; \
+	return error; \
+}
+
 /*! \fn void cleanup_pointers(size_t amount, ...)
  *	\brief Deallocates pointers of specified amount.
  *	\param[in] amount	amount of specified pointers.

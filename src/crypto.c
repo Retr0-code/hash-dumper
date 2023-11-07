@@ -157,11 +157,7 @@ static int openssl_evp_wrapper(
 uint8_t* get_md5(const char* data, size_t data_size)
 {
 	// Validating parameters
-	if (data == NULL || data_size == 0)
-	{
-		errno = EINVAL;
-		return NULL;
-	}
+	validate_parameters(data == NULL || data_size == 0, NULL);
 
 	uint8_t* hash = malloc_check(hash, 16, NULL);
 
@@ -176,11 +172,7 @@ uint8_t* get_md5(const char* data, size_t data_size)
 int rc4_encrypt(const uint8_t* data, int data_len, uint8_t* key, uint8_t* enc_data)
 {
 	// Validating parameters
-	if (data == NULL || data_len == 0 || key == NULL || enc_data == NULL)
-	{
-		errno = EINVAL;
-		return NULL;
-	}
+	validate_parameters(data == NULL || data_len == 0 || key == NULL || enc_data == NULL, -1);
 
 	RC4_KEY rc4_key;
 	RC4_set_key(&rc4_key, 16, key);
@@ -197,11 +189,7 @@ int aes_128_cbc_decrypt(
 )
 {
 	// Validating parameters
-	if (enc_data == NULL || data_len == 0 || key == NULL || iv == NULL || dec_data == NULL)
-	{
-		errno = EINVAL;
-		return NULL;
-	}
+	validate_parameters(enc_data == NULL || data_len == 0 || key == NULL || iv == NULL || dec_data == NULL, -1);
 
 	AES_KEY dec_key;
 	AES_set_decrypt_key(key, 128, &dec_key);
@@ -212,11 +200,7 @@ int aes_128_cbc_decrypt(
 int des_ecb_decrypt(const uint8_t* enc_data, int data_len, const uint8_t* key, uint8_t* dec_data)
 {
 	// Validating parameters
-	if (enc_data == NULL || data_len == 0 || key == NULL || dec_data == NULL)
-	{
-		errno = EINVAL;
-		return NULL;
-	}
+	validate_parameters(enc_data == NULL || data_len == 0 || key == NULL || dec_data == NULL, -1);
 
 	DES_cblock key_block;
 	memcpy(&key_block, key, sizeof(uint64_t));

@@ -26,11 +26,7 @@
 int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr)
 {
 	// Validating parameters
-	if (hive_ptr == NULL || hive_header_ptr == NULL)
-	{
-		errno = EINVAL;
-		return hv_invalid_arg;
-	}
+	validate_parameters(hive_ptr == NULL || hive_header_ptr == NULL, hv_invalid_arg);
 
 	// Set cursor to specified offset
 	if (fseek(hive_ptr, 0, SEEK_SET) != 0)
@@ -53,11 +49,7 @@ int read_hive_header(FILE* hive_ptr, hive_header_t* hive_header_ptr)
 int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_ptr)
 {
 	// Validating parameters
-	if (root_offset == 0 || hive_ptr == NULL || nk_ptr == NULL)
-	{
-		errno = EINVAL;
-		return hv_invalid_arg;
-	}
+	validate_parameters(root_offset == 0 || hive_ptr == NULL || nk_ptr == NULL, hv_invalid_arg);
 
 	// Setting cursor to named key offset
 	if (hive_file_seek(hive_ptr, root_offset) != 0)
@@ -96,11 +88,7 @@ int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_p
 int read_subkey_list(const uint32_t root_offset, FILE* hive_ptr, fast_leaf_t* lf_ptr)
 {
 	// Validating parameters
-	if (root_offset == 0 || hive_ptr == NULL || lf_ptr == NULL)
-	{
-		errno = EINVAL;
-		return hv_invalid_arg;
-	}
+	validate_parameters(root_offset == 0 || hive_ptr == NULL || lf_ptr == NULL, hv_invalid_arg);
 
 	// Setting cursor by offset parameter
 	if (hive_file_seek(hive_ptr, root_offset) != 0)
@@ -146,11 +134,7 @@ int read_subkey_list(const uint32_t root_offset, FILE* hive_ptr, fast_leaf_t* lf
 int read_vk_list(const uint32_t root_offset, FILE* hive_ptr, value_list_t* vk_list_ptr)
 {
 	// Validating parameters
-	if (root_offset == 0 || hive_ptr == NULL || vk_list_ptr == NULL)
-	{
-		errno = EINVAL;
-		return hv_invalid_arg;
-	}
+	validate_parameters(root_offset == 0 || hive_ptr == NULL || vk_list_ptr == NULL, hv_invalid_arg);
 
 	// Setting cursor by offset parameter
 	if (hive_file_seek(hive_ptr, root_offset) != 0)
@@ -181,11 +165,7 @@ int read_vk_list(const uint32_t root_offset, FILE* hive_ptr, value_list_t* vk_li
 int read_value_key(const uint32_t root_offset, FILE* hive_ptr, value_key_t* vk_ptr)
 {
 	// Validating parameters
-	if (root_offset == 0 || hive_ptr == NULL || vk_ptr == NULL)
-	{
-		errno = EINVAL;
-		return hv_invalid_arg;
-	}
+	validate_parameters(root_offset == 0 || hive_ptr == NULL || vk_ptr == NULL, hv_invalid_arg);
 
 	// Setting cursor to value key offset
 	if (hive_file_seek(hive_ptr, root_offset) != 0)
@@ -232,11 +212,7 @@ int read_value_key(const uint32_t root_offset, FILE* hive_ptr, value_key_t* vk_p
 reg_path_t* reg_make_path(uint32_t depth, ...)
 {
 	// Validating parameters
-	if (depth == 0)
-	{
-		errno = EINVAL;
-		return NULL;
-	}
+	validate_parameters(depth == 0, NULL);
 
 	// Allocation of registry path struct
 	reg_path_t* reg_path_ptr = malloc_check(reg_path_ptr, sizeof(reg_path_t), NULL);
@@ -291,11 +267,7 @@ reg_path_t* reg_make_path(uint32_t depth, ...)
 int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_ptr, FILE* hive_ptr, named_key_t* out_nk_ptr)
 {
 	// Validating parameters
-	if (base_nk_ptr == NULL || reg_path_ptr == NULL || hive_ptr == NULL || out_nk_ptr == NULL)
-	{
-		errno = EINVAL;
-		return hv_invalid_arg;
-	}
+	validate_parameters(base_nk_ptr == NULL || reg_path_ptr == NULL || hive_ptr == NULL || out_nk_ptr == NULL, hv_invalid_arg);
 
 	// Condition to end a recursion
 	if (reg_path_ptr->size == 0)
@@ -316,28 +288,28 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 	uint32_t embedded_nk_offset = 0;
 	for (size_t lf_index = 0; lf_index < sub_keys.elements_amount; lf_index++)
 	{
-		if (sub_keys.elements[lf_index].name_hint == hints[0])
-		{
-			embedded_nk_offset = sub_keys.elements[lf_index].node_offset;
+		if (sub_keys.elements[lf_index].name_hint != hints[0])
+			continue;
+
+		embedded_nk_offset = sub_keys.elements[lf_index].node_offset;
 			
-			// Deallocating name of temp NK
-			if (out_nk_ptr->name != NULL)
-				free(out_nk_ptr->name);
+		// Deallocating name of temp NK
+		if (out_nk_ptr->name != NULL)
+			free(out_nk_ptr->name);
 
-			// Reading new key
+		// Reading new key
+		{
+			int result = read_named_key(embedded_nk_offset, hive_ptr, out_nk_ptr);
+			if (result != hv_success)
 			{
-				int result = read_named_key(embedded_nk_offset, hive_ptr, out_nk_ptr);
-				if (result != hv_success)
-				{
-					free(sub_keys.elements);
-					return result;
-				}
+				free(sub_keys.elements);
+				return result;
 			}
-
-			// Checking names if hints are identical
-			if (strcmp(out_nk_ptr->name, reg_path_ptr->nodes[0]) == 0 || sub_keys.signature == LH_SIGN)
-				break;
 		}
+
+		// Checking names if hints are identical
+		if (strcmp(out_nk_ptr->name, reg_path_ptr->nodes[0]) == 0 || sub_keys.signature == LH_SIGN)
+			break;
 	}
 
 	// Checking if embedded key exists in base key
@@ -373,11 +345,7 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 int reg_enum_value(const named_key_t* base_nk_ptr, const char* value_name, FILE* hive_ptr, value_key_t* out_vk_ptr)
 {
 	// Validating parameters
-	if (base_nk_ptr == NULL || value_name == NULL || hive_ptr == NULL || out_vk_ptr == NULL)
-	{
-		errno = EINVAL;
-		return hv_invalid_arg;
-	}
+	validate_parameters(base_nk_ptr == NULL || value_name == NULL || hive_ptr == NULL || out_vk_ptr == NULL, hv_invalid_arg);
 
 	// Allocating value list
 	value_list_t value_list;
@@ -414,11 +382,7 @@ int reg_enum_value(const named_key_t* base_nk_ptr, const char* value_name, FILE*
 void* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr)
 {
 	// Validating parameters
-	if (vk_ptr == NULL || hive_ptr == NULL)
-	{
-		errno = EINVAL;
-		return NULL;
-	}
+	validate_parameters(vk_ptr == NULL || hive_ptr == NULL, NULL);
 
 	// Allocating space for a value
 	void* value = malloc_check(value, vk_ptr->data_size, NULL);
@@ -440,11 +404,7 @@ void* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr)
 char16_t* reg_get_class(named_key_t* nk_ptr, FILE* hive_ptr)
 {
     // Validating parameters
-	if (nk_ptr == NULL || hive_ptr == NULL)
-	{
-		errno = EINVAL;
-		return NULL;
-	}
+	validate_parameters(nk_ptr == NULL || hive_ptr == NULL, NULL);
 
 	// Moving cursor to value position
 	if (hive_file_seek(hive_ptr, nk_ptr->class_name_offset) != 0)
@@ -488,11 +448,7 @@ inline size_t hive_read_struct(FILE* hive_ptr, void* hive_struct, size_t read_si
 int hive_get_root(FILE* hive_ptr, hive_header_t* hive_header_ptr, named_key_t* root_key_ptr)
 {
 	// Validating parameters
-	if (hive_ptr == NULL || hive_header_ptr == NULL || root_key_ptr == NULL)
-	{
-		errno = EINVAL;
-		return hv_invalid_arg;
-	}
+	validate_parameters(hive_ptr == NULL || hive_header_ptr == NULL || root_key_ptr == NULL, hv_invalid_arg);
 
 	// Reading header structure
 	if (read_hive_header(hive_ptr, hive_header_ptr) != 0)
@@ -507,8 +463,7 @@ int hive_get_root(FILE* hive_ptr, hive_header_t* hive_header_ptr, named_key_t* r
 
 uint32_t get_name_hash(const char* leaf_name)
 {
-	if (leaf_name == NULL)
-		return 0;
+	validate_parameters(leaf_name == NULL, 0);
 
 	uint64_t hash = 0;
 	size_t length = strlen(leaf_name);

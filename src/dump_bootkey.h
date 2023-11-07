@@ -61,12 +61,12 @@ int dump_bootkey(FILE* sys_hive, char16_t* out_bootkey);
  */
 int get_hashed_bootkey(const char16_t* u16_bootkey, FILE* sam_hive, uint8_t* hashed_bootkey);
 
-/*!	\fn uint8_t* bootkey_from_u16(const char16_t* wstr)
+/*!	\fn static uint8_t* bootkey_from_u16(const char16_t* wstr)
  *	\brief Converst bootkey wide char string to array of size 16 of one byte integers
  *	\param[in] wstr		UTF-16 bootkey uppercase string.
  *	\return		hashed bootkey bytes array of size \a RAW_BOOTKEY_LENGTH
  */
-uint8_t* bootkey_from_u16(const char16_t* wstr);
+static uint8_t* bootkey_from_u16(const char16_t* wstr);
 
 /*!	\fn	static int ntlmv1_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* hashed_bootkey)
  *	\brief Generates NTLMv1 hashed bootkey

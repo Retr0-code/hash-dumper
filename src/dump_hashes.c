@@ -18,12 +18,8 @@
 int ntlm_user_init(ntlm_user_t* user_info_ptr)
 {
     // Validating parameters
-    if (user_info_ptr == NULL)
-    {
-        errno = EINVAL;
-        return -1;
-    }
-
+    validate_parameters(user_info_ptr == NULL, -1);
+    
     user_info_ptr->lmhash = malloc_check(user_info_ptr->lmhash, 16, -2);
     user_info_ptr->nthash = malloc_check_clean(user_info_ptr->nthash, 16, -3, 1, user_info_ptr->lmhash);
 
@@ -33,11 +29,7 @@ int ntlm_user_init(ntlm_user_t* user_info_ptr)
 int ntlm_user_destroy(ntlm_user_t* user_info_ptr)
 {
     // Validating parameters
-    if (user_info_ptr == NULL)
-    {
-        errno = EINVAL;
-        return -1;
-    }
+    validate_parameters(user_info_ptr == NULL, -1);
 
     free(user_info_ptr->lmhash);
     free(user_info_ptr->nthash);
@@ -49,11 +41,7 @@ int ntlm_user_destroy(ntlm_user_t* user_info_ptr)
 int dump_users_keys(FILE* sam_hive, named_key_t** users_keys_array, size_t* users_amount)
 {
     // Validating parameters
-    if (sam_hive == NULL || users_amount == NULL)
-    {
-        errno = EINVAL;
-        return -1;
-    }
+    validate_parameters(sam_hive == NULL || users_amount == NULL || users_amount == 0, -1);
 
     // Allocating hive header
     hive_header_t* hive_header_ptr = malloc_check(hive_header_ptr, sizeof(hive_header_t), -2);
@@ -145,11 +133,7 @@ int dump_users_keys(FILE* sam_hive, named_key_t** users_keys_array, size_t* user
 int dump_v_value(FILE* sam_hive, named_key_t* user_key_ptr, ntlm_user_t* user_info_ptr)
 {
     // Validating parameters
-    if (sam_hive == NULL || user_key_ptr == NULL || user_info_ptr == NULL)
-    {
-        errno = EINVAL;
-        return -1;
-    }
+    validate_parameters(sam_hive == NULL || user_key_ptr == NULL || user_info_ptr == NULL, -1);
 
     // Reading value key
     value_key_t* v_key_ptr = malloc_check(v_key_ptr, sizeof(value_key_t), -2);
@@ -178,11 +162,7 @@ int dump_v_value(FILE* sam_hive, named_key_t* user_key_ptr, ntlm_user_t* user_in
 int dump_user_name(ntlm_user_t* user_info_ptr)
 {
     // Validating parameters
-    if (user_info_ptr == NULL)
-    {
-        errno = EINVAL;
-        return -1;
-    }
+    validate_parameters(user_info_ptr == NULL, -1);
 
     uint32_t name_offset = 0;
     uint32_t name_length = 0;
@@ -200,11 +180,7 @@ int dump_user_name(ntlm_user_t* user_info_ptr)
 int dump_user_ntlm(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey)
 {
     // Validating parameters
-    if (user_info_ptr == NULL || hashed_bootkey == NULL)
-    {
-        errno = EINVAL;
-        return -1;
-    }
+    validate_parameters(user_info_ptr == NULL || hashed_bootkey == NULL, -1);
 
     // Decrypt LM hash
     int result = decrypt_ntlm_hash(user_info_ptr, hashed_bootkey, hash_lm);
@@ -222,11 +198,7 @@ int dump_user_ntlm(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey)
 int decrypt_ntlm_hash(ntlm_user_t* user_info_ptr, const uint8_t* hashed_bootkey, const hash_type_e hash_type)
 {
     // Validating parameters
-    if (user_info_ptr == NULL || hashed_bootkey == NULL)
-    {
-        errno = EINVAL;
-        return -1;
-    }
+    validate_parameters(user_info_ptr == NULL || hashed_bootkey == NULL, -1);
 
     // Retrieving hash offset from V value
     uint32_t hash_offset = 0;
@@ -293,15 +265,10 @@ int decrypt_ntlm_hash_wrapper(
 )
 {
     // Validating parameters
-    if (enc_hash == NULL || hashed_bootkey == NULL ||
+    validate_parameters(enc_hash == NULL || hashed_bootkey == NULL ||
         salt == NULL || user_info_ptr == NULL ||
         decrypted_hash == NULL || ntlm_version == NULL ||
-        user_info_ptr == NULL
-        )
-    {
-        errno = EINVAL;
-        return -1;
-    }
+        user_info_ptr == NULL, -1);
 
     uint64_t des_key1 = 0;
     uint64_t des_key2 = 0;
@@ -344,11 +311,7 @@ int decrypt_ntlmv1_callback(
 )
 {
     // Validating parameters
-    if (encrypted_hash == NULL || hashed_bootkey == NULL || salt == NULL || output == NULL || user_info_ptr == NULL)
-    {
-        errno = EINVAL;
-        return -1;
-    }
+    validate_parameters(encrypted_hash == NULL || hashed_bootkey == NULL || salt == NULL || output == NULL || user_info_ptr == NULL, -1);
 
     // Constructing full data for RC4 key
     size_t ntlmphrase_len = strlen(salt) + 1;
@@ -383,11 +346,7 @@ int decrypt_ntlmv2_callback(
 )
 {
     // Validating parameters
-    if (encrypted_hash == NULL || hashed_bootkey == NULL || salt == NULL || output == NULL || user_info_ptr == NULL)
-    {
-        errno = EINVAL;
-        return -1;
-    }
+    validate_parameters(encrypted_hash == NULL || hashed_bootkey == NULL || salt == NULL || output == NULL || user_info_ptr == NULL, -1);
 
     if (aes_128_cbc_decrypt(encrypted_hash, 32, hashed_bootkey, salt, output) == 0)
         return -2;
@@ -398,11 +357,7 @@ int decrypt_ntlmv2_callback(
 int sid_to_des_keys(uint32_t sid, uint64_t* key1, uint64_t* key2)
 {
     // Validating parameters
-    if (key1 == NULL || key2 == NULL)
-    {
-        errno = EINVAL;
-        return -1;
-    }
+    validate_parameters(key1 == NULL || key2 == NULL, -1);
 
     // Creating pointers to use uint64_t pointer as a byte array
     uint8_t* key1_array = key1;
