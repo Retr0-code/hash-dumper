@@ -142,4 +142,9 @@ void arg_show_help(arg_parser_t* parser_ptr);
  */
 int arg_delete(argument_t* arg);
 
+/*! \fn const char* arg_get_unknown()
+ *  \return unknown argument if specified or NULL if not.
+ */
+const char* arg_get_unknown();
+
 #endif

@@ -15,6 +15,9 @@
 
 #include "arg_parser.h"
 
+// Stores unknown argument's key
+static char* unknown_argument_key = NULL;
+
 int arg_parser_init(size_t args_amount, const char* prog_info, arg_parser_t* parser_ptr)
 {
     // Validating parameters
@@ -141,7 +144,10 @@ int arg_parse(int argc, const char **argv, arg_parser_t *parser_ptr)
 
         // If argument was not found
         if (arg == NULL)
+        {
+            unknown_argument_key = argv[i];
             return arg_unknown;
+        }
 
         // If argument is parameter then next argument is a value
         if (arg->type == arg_parameter)
@@ -187,4 +193,9 @@ int arg_delete(argument_t *arg)
 
     free(arg);
     return arg_success;
+}
+
+const char* arg_get_unknown()
+{
+    return unknown_argument_key;
 }
