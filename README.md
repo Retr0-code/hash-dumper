@@ -39,6 +39,52 @@ For building required *OpenSSL >= 3.0 or OpenSSL 1.1.1* library. Use cmake to ge
  - [Running CMake with OpenSSL](https://stackoverflow.com/a/45548831)
  - [How to enable legacy provider?](https://github.com/openssl/openssl/issues/20112)
 
+**Basic setup**
+
+Cloning repository
+
+```sh
+$ git clone https://github.com/Retr0-code/hash-dumper
+$ git submodule update --init
+```
+
+----
+
+If You work alone
+
+```sh
+$ git branch dev_<username>
+$ git checkout dev_<username>
+$ git push -u origin dev_<username>
+```
+
+**OR**
+
+If You work in a small team
+
+```sh
+$ git checkout dev_<team_tag>
+$ git pull
+```
+
+
+**Building using cmake**
+
+Use *BUILD_ARCH* parameter to specify architecture of output binary
+
+*Architectures:*
+
+ - amd64 (default);
+ - i386;
+
+Use *BUILD_TARGET* parameter to specify compiling configuration
+
+*Configurations:*
+
+ - RELEASE (default);
+ - DEBUG;
+
+
 ## Manual
 
 You can use this utility to dump NTLMv1/2 hashes from already compromised host by using `--realtime` flag
