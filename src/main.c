@@ -92,7 +92,7 @@ int main(int argc, char const *argv[])
         {
             printf("[-] Parsing error: 0x%08x\n", res);
             if (res == arg_unknown)
-                puts("Unknown arguments were given.");
+                printf("Unknown arguments <%s> were given.\n", arg_get_unknown());
 
             arg_parser_delete(arg_parser);
             return -1;
