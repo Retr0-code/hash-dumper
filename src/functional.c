@@ -16,6 +16,9 @@
 
 void cleanup_pointers(size_t amount, ...)
 {
+	// Validating parameters
+	validate_parameters(amount == 0, 0);
+
     va_list pointers;
     va_start(pointers, amount);
 
@@ -28,11 +31,7 @@ void cleanup_pointers(size_t amount, ...)
 char* get_random_string(size_t length)
 {
 	// Validating parameter
-	if (length == 0)
-	{
-		errno = EINVAL;
-		return NULL;
-	}
+	validate_parameters(length == 0, NULL);
 
 	// Allocating string
 	char* str = malloc_check(str, length + 1, NULL);
@@ -48,6 +47,9 @@ char* get_random_string(size_t length)
 
 void bytes_to_hex(uint8_t* input, size_t length, char* output)
 {
+	// Validating parameters
+	validate_parameters(input == NULL || length == 0 || output == NULL, 0);
+
 	for (size_t i = 0; i < length; i++)
 		output += sprintf(output, "%02x", input[i]);
 }
@@ -56,11 +58,8 @@ void bytes_to_hex(uint8_t* input, size_t length, char* output)
 
 wchar_t* u16_to_u32(const char16_t* u16_input_str)
 {
-	if (u16_input_str == NULL)
-	{
-		errno = EINVAL;
-		return NULL;
-	}
+	// Validating parameters
+	validate_parameters(u16_input_str == NULL, NULL);
 
 	size_t u16_length = 0;
 	while (u16_input_str[u16_length++]);

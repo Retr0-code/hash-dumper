@@ -65,28 +65,30 @@ int resolve_temp_paths()
 
 int reg_save_key(const char* key_name, const char* save_to)
 {
+	validate_parameters(key_name == NULL || save_to == NULL, -1);
+
 	HANDLE token_handle = NULL;
 	if (OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token_handle) == 0)
 	{
 		CloseHandle(token_handle);
-		return -1;
+		return -2;
 	}
 
 	// Enabling requered priviles
 	if (enable_privilege(token_handle, SE_BACKUP_NAME, TRUE) != 0)
 	{
 		CloseHandle(token_handle);
-		return -1;
+		return -3;
 	}
 
 	// Opening registry hive
 	HKEY hive_handle = NULL;
 	if (RegOpenKeyA(HKEY_LOCAL_MACHINE, key_name, &hive_handle) != ERROR_SUCCESS)
-		return -2;
+		return -4;
 
 	// Saving hive to file
 	if (RegSaveKeyA(hive_handle, save_to, NULL) != ERROR_SUCCESS)
-		return -3;
+		return -5;
 
 	// Cleanup
 	RegCloseKey(hive_handle);
@@ -158,15 +160,18 @@ void set_paths(const char* sys_hive_path, const char* sam_hive_path)
 
 int open_hives(FILE** system_hive, FILE** sam_hive)
 {
+	// Validating parameters
+	validate_parameters(system_hive == NULL || sam_hive == NULL, -1);
+
 	*system_hive = fopen(system_hive_filepath, "rb");
 	if (*system_hive == NULL)
-		return -1;
+		return -2;
 
 	*sam_hive = fopen(sam_hive_filepath, "rb");
 	if (*sam_hive == NULL)
 	{
 		fclose(*system_hive);
-		return -2;
+		return -3;
 	}
 
 	return 0;
@@ -174,6 +179,9 @@ int open_hives(FILE** system_hive, FILE** sam_hive)
 
 void close_hives(FILE** system_hive, FILE** sam_hive, int delete_hives)
 {
+	// Validating parameters
+	validate_parameters(system_hive == NULL || sam_hive == NULL, 0);
+
 	fclose(*system_hive);
 	fclose(*sam_hive);
 

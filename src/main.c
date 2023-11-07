@@ -155,7 +155,6 @@ int main(int argc, char const *argv[])
         {
             printf("[-] Unable to read bootkey: 0x%08x\n", result);
             close_hives(&system_hive, &sam_hive, delete_hives);
-            free(boot_key_hex);
             return -1;
         }
     }
