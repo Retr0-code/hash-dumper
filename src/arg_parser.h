@@ -13,6 +13,10 @@
 	This header describes functions and structs for argument parsing
 */
 
+/*! \file arg_parser.h
+ *  \brief This header describes functions and structs for argument parsing
+ */
+
 #ifndef ARG_PARSER_H
 #define ARG_PARSER_H
 
@@ -22,63 +26,120 @@
 #include "functional.h"
 #include "string-hashtable/hash_table.h"
 
+/*! \enum arg_errors
+ *  \brief 
+ */
 enum arg_errors
 {
-    arg_success,
-    arg_invalid_arg,
-    arg_init_error,
-    arg_alloc_error,
-    arg_no_entity,
-    arg_unknown
+    arg_success,        //!< Function completed successfully.
+    arg_invalid_arg,    //!< Function got an invalid argument (e.g. NULL pointer).
+    arg_init_error,     //!< Parser or argument cannot be initialized.
+    arg_alloc_error,    //!< Failed allocation inside a function.
+    arg_no_entity,      //!< Key does not exist.
+    arg_unknown         //!< Unknown argument.
 };
 
-// Defines types of arguments
+/*! \enum arg_type
+ *  \brief Defines types of arguments
+ */
 typedef enum
 {
-    arg_flag,       // Stores as value count of arguments 
-    arg_parameter,  // Stores next argument as a value
+    arg_flag,       //!< Stores as value count of arguments.
+    arg_parameter,  //!< Stores next argument as a value.
 } arg_type;
 
+/*! \struct argument_t
+ *  \brief Defines structure for argument.
+ */
 typedef struct
 {
-    arg_type type;
-    const char* key;
-    const char* description;
-    const char* value;
+    arg_type type;              //!< Argument type flag/parameter.
+    const char* key;            //!< Key associated with arguemt.
+    const char* description;    //!< Description of given argument.
+    const char* value;          //!< Container for specified value if type is parameter and count if flag.
 } argument_t;
 
+/*! \struct arg_parser_t
+ *  \brief Describes argument parser.
+ */
 typedef struct
 {
-    size_t amount;
-    hashtable_t* arguments;
-    const char* prog_info;
+    size_t amount;              //!< Stores amount of specified arguments.
+    hashtable_t* arguments;     //!< Hashtable for arguments.
+    const char* prog_info;      //!< Info of program.
 } arg_parser_t;
 
-// Constructs an argument parser with total amount of arguments
+/*! \fn int arg_parser_init(size_t args_amount, const char* prog_info, arg_parser_t* parser_ptr)
+ *  \brief Constructs an argument parser with total amount of arguments.
+ *  \param[in] args_amount      Total amount of arguments that were given.
+ *  \param[in] prog_info        Description of the app.
+ *  \param[out] parser_ptr      Pointer to argument parser uninitialized structure.
+ *	\return	value of \a arg_errors enumeration (0 or \a arg_success on success).
+ */
 int arg_parser_init(size_t args_amount, const char* prog_info, arg_parser_t* parser_ptr);
 
-// Deletes the arguments parser
+/*! \fn int arg_parser_delete(arg_parser_t* parser_ptr)
+ *  \brief Deletes the arguments parser.
+ *  \param[in] parser_ptr       Total amount of arguments that were given.
+ *	\return	value of \a arg_errors enumeration (0 or \a arg_success on success).
+ */
 int arg_parser_delete(arg_parser_t* parser_ptr);
 
-// Constructs an argument_t pointer with specified parameters 
+/*! \fn const argument_t* arg_init_arg(arg_type type, const char* key, const char* description, void* value)
+ *  \brief Constructs an argument_t pointer with specified parameters.
+ *  \param[in] type         Argument type flag/parameter.
+ *  \param[in] key          Key associated with arguemt.
+ *  \param[in] description  Description of given argument.
+ *  \param[in] value        Default argument's value.
+ *	\return	initialized argument structure or NULL on error.
+ */
 const argument_t* arg_init_arg(arg_type type, const char* key, const char* description, void* value);
 
-// Adds specified arguments pointer to parser
+/*! \fn int arg_add(const argument_t* arg, arg_parser_t* parser_ptr)
+ *  \brief Adds single specified arguments pointer to parser.
+ *  \param[in] arg          pointer to argument structure.
+ *  \param[in] parser_ptr   pointer to parser structure.
+ *	\return	value of \a arg_errors enumeration (0 or \a arg_success on success).
+ */
 int arg_add(const argument_t* arg, arg_parser_t* parser_ptr);
 
-// Adds specified amount of arguments to parser
+/*! \fn int arg_add(const argument_t* arg, arg_parser_t* parser_ptr)
+ *  \brief Adds multiple specified arguments pointer to parser.
+ *  \param[in] args_amount  amount of specified arguments.
+ *  \param[in] parser_ptr   pointer to parser structure.
+ *  \param[in] ...          variadic list of arguments.
+ *	\return	value of \a arg_errors enumeration (0 or \a arg_success on success).
+ */
 int arg_add_amount(size_t args_amount, arg_parser_t* parser_ptr, ...);
 
-// Retrieves argument or NULL if does not exist
+/*! \fn argument_t* arg_get(const char* key, arg_parser_t* parser_ptr)
+ *  \brief Returns pointer argument struct or NULL if does not exist.
+ *  \param[in] key          Key associated with arguemt.
+ *  \param[in] parser_ptr   pointer to parser structure.
+ *	\return	pointer to argument struct or NULL if does not exists.
+ */
 argument_t* arg_get(const char* key, arg_parser_t* parser_ptr);
 
-// Parses arguments given to main function
+/*! \fn int arg_parse(int argc, const char** argv, arg_parser_t* parser_ptr)
+ *  \brief Parses arguments given to main function.
+ *  \param[in] argc         arguments amount including first arguments.
+ *  \param[in] argv         arguments strings array.
+ *  \param[in] parser_ptr   pointer to parser structure.
+ *	\return	value of \a arg_errors enumeration (0 or \a arg_success on success).
+ */
 int arg_parse(int argc, const char** argv, arg_parser_t* parser_ptr);
 
-// Shows help message/manual
+/*! \fn void arg_show_help(arg_parser_t* parser_ptr)
+ *  \brief Shows help message/manual.
+ *  \param[in] parser_ptr   pointer to parser structure.
+ */
 void arg_show_help(arg_parser_t* parser_ptr);
 
-// Deletes argument pointer
+/*! \fn int arg_delete(argument_t* arg)
+ *  \brief Deletes argument pointer
+ *  \param[in] parser_ptr   pointer to argument structure.
+ *	\return	value of \a arg_errors enumeration (0 or \a arg_success on success).
+ */
 int arg_delete(argument_t* arg);
 
 #endif
