@@ -51,14 +51,19 @@ int dump_bootkey(FILE* sys_hive, char16_t* out_bootkey)
     reg_path_t* reg_lsa_path = reg_make_path(3, "ControlSet001", "Control", "Lsa");
     if (reg_lsa_path == NULL)
     {
-        cleanup_pointers(3, hive_header_ptr, base_nk_ptr, lsa_nk_ptr);
+        free(hive_header_ptr);
+        reg_destroy_nk(base_nk_ptr);
+        reg_destroy_nk(lsa_nk_ptr);
         return -6;
     }
 
     // Enumerating named key by specified path
     if (reg_enum_subkey(base_nk_ptr, reg_lsa_path, sys_hive, lsa_nk_ptr) != 0)
     {
-        cleanup_pointers(4, hive_header_ptr, base_nk_ptr, lsa_nk_ptr, reg_lsa_path);
+        free(hive_header_ptr);
+        reg_destroy_nk(base_nk_ptr);
+        reg_destroy_nk(lsa_nk_ptr);
+        reg_destroy_path(reg_lsa_path);
         return -7;
     }
 
@@ -361,5 +366,7 @@ int ntlmv2_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* 
     // Saving only first half of hashed bootkey
     memset(hashed_bootkey + RAW_BOOTKEY_LENGTH, 0, RAW_BOOTKEY_LENGTH);
 
+    free(iv);
+    free(encrypted_bootkey);
     return 0;
 }
