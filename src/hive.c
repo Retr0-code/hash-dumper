@@ -473,3 +473,59 @@ uint32_t get_name_hash(const char* leaf_name)
 
 	return hash;
 }
+
+void reg_destroy_nk(named_key_t* nk_ptr)
+{
+	validate_parameters(nk_ptr == NULL, NULL);
+
+	if (nk_ptr->name != NULL)
+		free(nk_ptr->name);
+
+	free(nk_ptr);
+}
+
+void reg_destroy_vk(value_key_t* vk_ptr)
+{
+	validate_parameters(vk_ptr == NULL, NULL);
+
+	if (vk_ptr->name != NULL)
+		free(vk_ptr->name);
+
+	free(vk_ptr);
+}
+
+void reg_destroy_vk_list(value_list_t* vk_list_ptr)
+{
+	validate_parameters(vk_list_ptr == NULL, NULL);
+
+	if (vk_list_ptr->offsets != NULL)
+		free(vk_list_ptr->offsets);
+
+	free(vk_list_ptr);
+}
+
+void reg_destroy_lf(fast_leaf_t *lf_ptr)
+{
+	validate_parameters(lf_ptr == NULL, NULL);
+
+	if (lf_ptr->elements != NULL)
+		free(lf_ptr->elements);
+
+	free(lf_ptr);
+}
+
+void reg_destroy_path(reg_path_t* reg_path_ptr)
+{
+	validate_parameters(reg_path_ptr == NULL, NULL);
+
+	if (reg_path_ptr->nodes != NULL)
+		free(reg_path_ptr->nodes);
+
+	if (reg_path_ptr->nodes_hash != NULL)
+		free(reg_path_ptr->nodes);
+
+	if (reg_path_ptr->nodes_hints != NULL)
+		free(reg_path_ptr->nodes);
+
+	free(reg_path_ptr);
+}

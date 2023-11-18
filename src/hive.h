@@ -367,4 +367,14 @@ int hive_get_root(FILE* hive_ptr, hive_header_t* hive_header_ptr, named_key_t* r
  */
 uint32_t get_name_hash(const char* leaf_name);
 
+void reg_destroy_nk(named_key_t* nk_ptr);
+
+void reg_destroy_vk(value_key_t* vk_ptr);
+
+void reg_destroy_vk_list(value_list_t* vk_list_ptr);
+
+void reg_destroy_lf(fast_leaf_t* lf_ptr);
+
+void reg_destroy_path(reg_path_t* reg_path_ptr);
+
 #endif
