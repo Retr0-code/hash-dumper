@@ -109,9 +109,6 @@ int dump_bootkey(FILE* sys_hive, char16_t* out_bootkey)
 
     out_bootkey[RAW_BOOTKEY_LENGTH * 2] = L'\0';
 
-    for (size_t i = 0; i < RAW_BOOTKEY_LENGTH * 2; i++)
-        out_bootkey[i] = towupper(out_bootkey[i]);
-
     cleanup_pointers(5, hive_header_ptr, base_nk_ptr, lsa_nk_ptr, reg_lsa_path, reg_endpoint_path);
     return 0;
 }
@@ -275,14 +272,27 @@ static uint8_t* bootkey_from_u16(const char16_t* wstr)
     uint8_t* bootkey_decoded = malloc_check(bootkey_decoded, RAW_BOOTKEY_LENGTH, NULL);
     for (size_t i = 0; i < RAW_BOOTKEY_LENGTH; i++)
     {
-        uint8_t fh = (*(wstr + (i << 1)) & 0x00ff);        // Taking first 4 bits of an integer
+        uint8_t fh = (*(wstr + (i << 1)) & 0x00ff);   // Taking first 4 bits of an integer
         uint8_t sh = (*(wstr + (i << 1) + 1) & 0x00ff);    // Taking second 4 bits of an integer
 
         // Converting half-bytes by symbolic table
         // Chars start from 0x41 and nums - from 0x30
-        fh -= fh >= 'A' ? 0x37 : 0x30;
-        sh -= sh >= 'A' ? 0x37 : 0x30;
+        if (fh >= 'A')
+        {
+            fh |= 32;
+            fh -= 0x67;
+        }
+        else
+           fh -= 0x30;
 
+        if (fh >= 'A')
+        {
+            sh |= 32;
+            sh -= 0x67;
+        }
+        else
+           sh -= 0x30;
+        
         // Writing result to array
         bootkey_decoded[i] = (fh << 4) | sh;
     }
