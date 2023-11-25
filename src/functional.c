@@ -23,7 +23,11 @@ void cleanup_pointers(size_t amount, ...)
     va_start(pointers, amount);
 
     for (; amount > 0; amount--)
-        free(va_arg(pointers, char*));
+	{
+		void* current_ptr = va_arg(pointers, char*);
+		if (current_ptr != NULL)
+        	free(current_ptr);
+	}
 
     va_end(pointers);
 }

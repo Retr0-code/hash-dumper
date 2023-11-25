@@ -67,6 +67,14 @@ if (ptr_name == NULL) \
 	return status; \
 }
 
+// Allocates memory on error deletes specied pointers and returns status
+#define malloc_check_lambda(ptr_name, mem_size, expression) malloc(mem_size); \
+if (ptr_name == NULL) \
+{ \
+	errno = ENOMEM; \
+	expression; \
+}
+
 #define validate_parameters(condition, error) if ((condition))\
 { \
 	errno = EINVAL; \

@@ -28,55 +28,49 @@ int dump_bootkey(FILE* sys_hive, char16_t* out_bootkey)
     // Validating parameters
     validate_parameters(sys_hive == NULL || out_bootkey == NULL, -1);
 
+    int return_status = 0;
+
     // Allocating hive header
     hive_header_t* hive_header_ptr = malloc_check(hive_header_ptr, sizeof(hive_header_t), -2);
     // Allocating base named key
     named_key_t* base_nk_ptr = malloc_check(base_nk_ptr, sizeof(named_key_t), -3);
     if (hive_get_root(sys_hive, hive_header_ptr, base_nk_ptr) != hv_success)
     {
-        cleanup_pointers(2, hive_header_ptr, base_nk_ptr);
-        return -4;
+        return_status = -4;
+        goto fn_end;
     }
 
     // Allocating endpoint named key
-    named_key_t* lsa_nk_ptr = malloc_check_clean(
-        lsa_nk_ptr,
-        sizeof(named_key_t),
-        -5, 2,
-        hive_header_ptr,
-        base_nk_ptr
-    );
+    named_key_t* lsa_nk_ptr = malloc_check_lambda(
+        lsa_nk_ptr, sizeof(named_key_t),
+        {
+            return_status = -5; goto fn_end;
+        }
+    )
 
     // Constructing registry path struct
     reg_path_t* reg_lsa_path = reg_make_path(3, "ControlSet001", "Control", "Lsa");
     if (reg_lsa_path == NULL)
     {
-        free(hive_header_ptr);
-        reg_destroy_nk(base_nk_ptr);
-        reg_destroy_nk(lsa_nk_ptr);
-        return -6;
+        return_status = -6;
+        goto fn_end;
     }
 
     // Enumerating named key by specified path
     if (reg_enum_subkey(base_nk_ptr, reg_lsa_path, sys_hive, lsa_nk_ptr) != 0)
     {
-        free(hive_header_ptr);
-        reg_destroy_nk(base_nk_ptr);
-        reg_destroy_nk(lsa_nk_ptr);
-        reg_destroy_path(reg_lsa_path);
-        return -7;
+        return_status = -7;
+        goto fn_end;
     }
 
     // Allocating endpoint named key for bootkey values
-    named_key_t* endpoint_nk_ptr = malloc_check_clean(
-        endpoint_nk_ptr,
-        sizeof(named_key_t),
-        -8, 4,
-        hive_header_ptr,
-        base_nk_ptr,
-        lsa_nk_ptr,
-        reg_lsa_path
-    );
+    named_key_t* endpoint_nk_ptr = malloc_check_lambda(
+        endpoint_nk_ptr, sizeof(named_key_t),
+        {
+            return_status = -8;
+            goto fn_end;
+        }
+    )
 
     // List of named keys to construct the bootkey
     const char* lsa_values[4] = {"JD", "Skew1", "GBG", "Data"};
@@ -88,23 +82,23 @@ int dump_bootkey(FILE* sys_hive, char16_t* out_bootkey)
         reg_endpoint_path = reg_make_path(1, lsa_values[i]);
         if (reg_endpoint_path == NULL)
         {
-            cleanup_pointers(5, hive_header_ptr, base_nk_ptr, lsa_nk_ptr, reg_lsa_path, reg_endpoint_path);
-            return -9;
+            return_status = -9;
+            goto fn_end;
         }
 
         // Enumerating endpoint subkey in specific order
         if (reg_enum_subkey(lsa_nk_ptr, reg_endpoint_path, sys_hive, endpoint_nk_ptr) != 0)
         {
-            cleanup_pointers(5, hive_header_ptr, base_nk_ptr, lsa_nk_ptr, reg_lsa_path, reg_endpoint_path);
-            return -10;
+            return_status = -10;
+            goto fn_end;
         }
 
         // Reading hex UTF-16 bootkey part from class names of specified named keys
         bootkey_part = reg_get_class(endpoint_nk_ptr, sys_hive);
         if (bootkey_part == NULL)
         {
-            cleanup_pointers(5, hive_header_ptr, base_nk_ptr, lsa_nk_ptr, reg_lsa_path, reg_endpoint_path);
-            return -11;
+            return_status = -11;
+            goto fn_end;
         }
 
         // Constructing full bootkey
@@ -114,14 +108,23 @@ int dump_bootkey(FILE* sys_hive, char16_t* out_bootkey)
 
     out_bootkey[RAW_BOOTKEY_LENGTH * 2] = L'\0';
 
-    cleanup_pointers(5, hive_header_ptr, base_nk_ptr, lsa_nk_ptr, reg_lsa_path, reg_endpoint_path);
-    return 0;
+fn_end:
+    if (hive_header_ptr != NULL)
+        free(hive_header_ptr);
+    
+    reg_destroy_nk(base_nk_ptr);
+    reg_destroy_nk(lsa_nk_ptr);
+    reg_destroy_path(reg_lsa_path);
+    reg_destroy_path(reg_endpoint_path);
+    return return_status;
 }
 
 int get_hashed_bootkey(const char16_t* u16_bootkey, FILE* sam_hive, uint8_t* hashed_bootkey)
 {
     // Validating parameters
     validate_parameters(u16_bootkey == NULL || hashed_bootkey == NULL, -1);
+
+    int return_status = 0;
 
     // Decoding hex string to raw values
     uint8_t* raw_bootkey = bootkey_from_u16(u16_bootkey);
@@ -145,73 +148,66 @@ int get_hashed_bootkey(const char16_t* u16_bootkey, FILE* sam_hive, uint8_t* has
     // Allocating hive header
     hive_header_t* hive_header_ptr = malloc_check(hive_header_ptr, sizeof(hive_header_t), -3);
     // Allocating base named key
-    named_key_t* base_nk_ptr = malloc_check_clean(base_nk_ptr, sizeof(named_key_t), -4, 2, hive_header_ptr, raw_bootkey);
+    named_key_t* base_nk_ptr = malloc_check_lambda(
+        base_nk_ptr, sizeof(named_key_t),
+        {
+            return_status = -4;
+            goto fn_end;
+        }
+    )
 
     if (hive_get_root(sam_hive, hive_header_ptr, base_nk_ptr) != hv_success)
     {
-        cleanup_pointers(3, hive_header_ptr, raw_bootkey, base_nk_ptr);
-        return -5;
+        return_status - 5;
+        goto fn_end;
     }
 
     reg_path_t* reg_accounts_path = reg_make_path(3, "SAM", "Domains", "Account");
 
     if (reg_accounts_path == NULL)
     {
-        cleanup_pointers(4, hive_header_ptr, raw_bootkey, base_nk_ptr, reg_accounts_path);
-        return -6;
+        return_status = -6;
+        goto fn_end;
     }
 
     // Allocating endpoint named key
-    named_key_t* accounts_nk_ptr = malloc_check_clean(
-        accounts_nk_ptr,
-        sizeof(named_key_t),
-        -7, 4,
-        hive_header_ptr,
-        raw_bootkey,
-        base_nk_ptr,
-        reg_accounts_path
-    );
+    named_key_t* accounts_nk_ptr = malloc_check_lambda(
+        accounts_nk_ptr, sizeof(named_key_t),
+        {
+            return_status = -7;
+            goto fn_end;
+        }
+    )
 
     // Enumerating named key by specified path
     if (reg_enum_subkey(base_nk_ptr, reg_accounts_path, sam_hive, accounts_nk_ptr) != 0)
     {
-        cleanup_pointers(5, hive_header_ptr, raw_bootkey, base_nk_ptr, reg_accounts_path, accounts_nk_ptr);
-        return -8;
+        return_status = -8;
+        goto fn_end;
     }
 
     // Allocating value key for "F" value
-    value_key_t* f_value_ptr = malloc_check_clean(
-        f_value_ptr,
-        sizeof(value_key_t),
-        -9, 5,
-        hive_header_ptr,
-        raw_bootkey,
-        base_nk_ptr,
-        reg_accounts_path,
-        accounts_nk_ptr
+    value_key_t* f_value_vk_ptr = malloc_check_lambda(
+        f_value_vk_ptr, sizeof(value_key_t),
+        {
+            return_status = -9;
+            goto fn_end;
+        }
     );
 
     // Reading "F" value
-    if (reg_enum_value(accounts_nk_ptr, "F", sam_hive, f_value_ptr) != 0)
+    if (reg_enum_value(accounts_nk_ptr, "F", sam_hive, f_value_vk_ptr) != 0)
     {
-        cleanup_pointers(6,
-            hive_header_ptr, raw_bootkey,
-            base_nk_ptr, reg_accounts_path,
-            accounts_nk_ptr, f_value_ptr
-        );
-        return -10;
+        return_status = -10;
+        goto fn_end;
     }
 
     // Saving "F" value
-    uint8_t* f_value = reg_get_value(f_value_ptr, sam_hive);
+    uint8_t* f_value = reg_get_value(f_value_vk_ptr, sam_hive);
     if (f_value == NULL)
     {
-        cleanup_pointers(6, 
-            hive_header_ptr, raw_bootkey,
-            base_nk_ptr, reg_accounts_path,
-            accounts_nk_ptr, f_value_ptr
-        );
-        return -11;
+        return_status = -11;
+        goto fn_end;
     }
 
     // Determining ntlm version based on F value version
@@ -231,31 +227,23 @@ int get_hashed_bootkey(const char16_t* u16_bootkey, FILE* sam_hive, uint8_t* has
     // Checking if read data is valid
     if (hash_function == NULL)
     {
-        cleanup_pointers(7, 
-            hive_header_ptr, raw_bootkey,
-            base_nk_ptr, reg_accounts_path,
-            accounts_nk_ptr, f_value_ptr, f_value
-        );
-        return -12;
+        return_status = -12;
+        goto fn_end;
     }
 
     // Hashing bootkey
     if ((*hash_function)(permutated_bootkey, f_value, hashed_bootkey) != 0)
     {
-        cleanup_pointers(7,
-            hive_header_ptr, raw_bootkey,
-            base_nk_ptr, reg_accounts_path,
-            accounts_nk_ptr, f_value_ptr, f_value
-        );
-        return -13;
+        return_status = -13;
     }
 
-    cleanup_pointers(7, 
-        hive_header_ptr, raw_bootkey,
-        base_nk_ptr, reg_accounts_path,
-        accounts_nk_ptr, f_value_ptr, f_value
-    );
-    return 0;
+fn_end:
+    reg_destroy_nk(base_nk_ptr);
+    reg_destroy_path(reg_accounts_path);
+    reg_destroy_nk(accounts_nk_ptr);
+    reg_destroy_vk(f_value_vk_ptr);
+    cleanup_pointers(3, hive_header_ptr, raw_bootkey, f_value);
+    return return_status;
 }
 
 static uint8_t* bootkey_from_u16(const char16_t* wstr)

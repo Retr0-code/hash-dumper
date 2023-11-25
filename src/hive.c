@@ -522,10 +522,10 @@ void reg_destroy_path(reg_path_t* reg_path_ptr)
 		free(reg_path_ptr->nodes);
 
 	if (reg_path_ptr->nodes_hash != NULL)
-		free(reg_path_ptr->nodes);
+		free(reg_path_ptr->nodes_hash);
 
 	if (reg_path_ptr->nodes_hints != NULL)
-		free(reg_path_ptr->nodes);
+		free(reg_path_ptr->nodes_hints);
 
 	free(reg_path_ptr);
 }
