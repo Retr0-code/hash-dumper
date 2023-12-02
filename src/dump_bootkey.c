@@ -298,6 +298,8 @@ int ntlmv1_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* 
     // Validating parameters
     validate_parameters(permutated_bootkey == NULL || f_value == NULL || hashed_bootkey == NULL, -1);
 
+    int return_status = 0;
+
     // Constants for hashed bootkey construction
     const char* aqwerty = "!@#$%^&*()qwertyUIOPAzxcvbnmQQQQQQQQQQQQ)(*@&%\0";
     const char* anum = "0123456789012345678901234567890123456789\0";
@@ -319,21 +321,17 @@ int ntlmv1_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* 
     uint8_t* md5_key = get_md5(pre_hashed_bootkey, total_length);
     if (md5_key == NULL)
     {
-        free(pre_hashed_bootkey);
-        return -3;
+        return_status = -3;
+        goto fn_end;
     }
 
     // Encrypting bootkey using rc4
     if (rc4_encrypt(f_value + 0x80, MD5_DIGEST_LENGTH, md5_key, hashed_bootkey) == 0)
-    {
-        free(pre_hashed_bootkey);
-        free(md5_key);
-        return -3;
-    }
+        return_status = -4;
 
-    free(pre_hashed_bootkey);
-    free(md5_key);
-    return 0;
+fn_end:
+    cleanup_pointers(2, pre_hashed_bootkey, md5_key);
+    return return_status;
 }
 
 int ntlmv2_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* hashed_bootkey)
@@ -341,20 +339,25 @@ int ntlmv2_hash_bootkey(uint8_t* permutated_bootkey, uint8_t* f_value, uint8_t* 
     // Validating parameters
     validate_parameters(permutated_bootkey == NULL || f_value == NULL || hashed_bootkey == NULL, -1);
 
+    int return_status = 0;
+
     // Allocating space for IV taken from F[0x78:0x88] and encrypted bootkey taken from F[0x88:0xA8]
-    uint8_t* iv = malloc_check(iv, AES_BLOCK_SIZE, -3);
-    uint8_t* encrypted_bootkey = malloc_check(encrypted_bootkey, 0x20, -4);
+    uint8_t* iv = malloc_check(iv, AES_BLOCK_SIZE, -2);
+    uint8_t* encrypted_bootkey = malloc_check(encrypted_bootkey, 0x20, -3);
     memcpy(iv, f_value + 0x78, AES_BLOCK_SIZE);
     memcpy(encrypted_bootkey, f_value + 0x88, 0x20);
 
     // Decrypt bootkey
     if (aes_128_cbc_decrypt(encrypted_bootkey, 0x20, permutated_bootkey, iv, hashed_bootkey) == 0)
-        return -2;
+    {
+        return_status = -4;
+        goto fn_end;
+    }
 
     // Saving only first half of hashed bootkey
     memset(hashed_bootkey + RAW_BOOTKEY_LENGTH, 0, RAW_BOOTKEY_LENGTH);
 
-    free(iv);
-    free(encrypted_bootkey);
-    return 0;
+fn_end:
+    cleanup_pointers(2, iv, encrypted_bootkey);
+    return return_status;
 }

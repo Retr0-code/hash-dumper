@@ -190,4 +190,6 @@ void close_hives(FILE** system_hive, FILE** sam_hive, int delete_hives)
 		remove(system_hive_filepath);
 		remove(sam_hive_filepath);
 	}
+	
+	cleanup_pointers(2, system_hive_filepath, sam_hive_filepath);
 }

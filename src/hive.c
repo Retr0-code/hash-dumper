@@ -79,7 +79,11 @@ int read_named_key(const uint32_t root_offset, FILE* hive_ptr, named_key_t* nk_p
 	nk_ptr->name = malloc_check(nk_ptr->name, nk_ptr->name_length + 1, hv_alloc_error);
 
 	if (fread(nk_ptr->name, nk_ptr->name_length, 1, hive_ptr) != 1)
+	{
+		free(nk_ptr->name);
+		nk_ptr->name = NULL;
 		return hv_read_error;
+	}
 
 	nk_ptr->name[nk_ptr->name_length] = '\0';
 	return hv_success;
@@ -125,6 +129,7 @@ int read_subkey_list(const uint32_t root_offset, FILE* hive_ptr, fast_leaf_t* lf
 	if (fread(lf_ptr->elements, lf_ptr->elements_amount * sizeof(lf_element_t), 1, hive_ptr) != 1)
 	{
 		free(lf_ptr->elements);
+		lf_ptr->elements = NULL;
 		return hv_read_error;
 	}
 
@@ -157,7 +162,11 @@ int read_vk_list(const uint32_t root_offset, FILE* hive_ptr, value_list_t* vk_li
 
 	// Reading offsets
 	if (fread(vk_list_ptr->offsets, vk_list_ptr->size * sizeof(uint32_t), 1, hive_ptr) != 1)
+	{
+		free(vk_list_ptr->offsets);
+		vk_list_ptr->offsets = NULL;
 		return hv_read_error;
+	}
 
 	return hv_success;
 }
@@ -202,7 +211,11 @@ int read_value_key(const uint32_t root_offset, FILE* hive_ptr, value_key_t* vk_p
 
 	// Reading value's name (ASCII)
 	if (fread(vk_ptr->name, vk_ptr->name_length, 1, hive_ptr) != 1)
+	{
+		free(vk_ptr->name);
+		vk_ptr->name = NULL;
 		return hv_read_error;
+	}
 
 	vk_ptr->name[vk_ptr->name_length] = '\0';
 
@@ -216,34 +229,40 @@ reg_path_t* reg_make_path(uint32_t depth, ...)
 
 	// Allocation of registry path struct
 	reg_path_t* reg_path_ptr = malloc_check(reg_path_ptr, sizeof(reg_path_t), NULL);
+	memset(reg_path_ptr, 0, sizeof(reg_path_t));
 
 	// Setting given values
 	reg_path_ptr->size = depth;
-	reg_path_ptr->nodes = malloc_check_clean(
+	reg_path_ptr->nodes = malloc_check_lambda(
 		reg_path_ptr->nodes,
 		reg_path_ptr->size * sizeof(const char*),
-		NULL,
-		1,
-		reg_path_ptr
-	);
+		{
+			reg_destroy_path(reg_path_ptr);
+			reg_path_ptr = NULL;
+			goto fn_end;
+		}
+	)
 
 	// Allocation hints list (first 4 bytes from name)
-	reg_path_ptr->nodes_hints = malloc_check_clean(
+	reg_path_ptr->nodes_hints = malloc_check_lambda(
 		reg_path_ptr->nodes_hints,
 		reg_path_ptr->size * sizeof(uint32_t),
-		NULL,
-		1,
-		reg_path_ptr
-	);
+		{
+			reg_destroy_path(reg_path_ptr);
+			reg_path_ptr = NULL;
+			goto fn_end;
+		}
+	)
 
 	// Allocation hashes list (first 4 bytes from name)
-	reg_path_ptr->nodes_hash = malloc_check_clean(
+	reg_path_ptr->nodes_hash = malloc_check_lambda(
 		reg_path_ptr->nodes_hash,
 		reg_path_ptr->size * sizeof(uint32_t),
-		NULL,
-		2,
-		reg_path_ptr,
-		reg_path_ptr->nodes_hints
+		{
+			reg_destroy_path(reg_path_ptr);
+			reg_path_ptr = NULL;
+			goto fn_end;
+		}
 	);
 
 	// Initializing variadic parameters
@@ -260,7 +279,7 @@ reg_path_t* reg_make_path(uint32_t depth, ...)
 	
 	// Deleting variadic parameters list
 	va_end(reg_path);
-
+fn_end:
 	return reg_path_ptr;
 }
 
@@ -268,30 +287,43 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 {
 	// Validating parameters
 	validate_parameters(base_nk_ptr == NULL || reg_path_ptr == NULL || hive_ptr == NULL || out_nk_ptr == NULL, hv_invalid_arg);
-
 	// Condition to end a recursion
 	if (reg_path_ptr->size == 0)
 		return hv_success;
 	else
 		out_nk_ptr->name = NULL;	// Because we do not need a name, when node is not requiered
 
+	int return_status = hv_success;
+
 	// Reading fast leaf (offsets list)
-	fast_leaf_t sub_keys;
-	if (read_subkey_list(base_nk_ptr->subkey_offset, hive_ptr, &sub_keys) != hv_success)
-		return hv_read_error;
+	// fast_leaf_t sub_keys;
+	fast_leaf_t* sub_keys = malloc_check_lambda(
+		sub_keys,
+		sizeof(fast_leaf_t),
+		{
+			return_status = hv_alloc_error;
+			goto fn_end;
+		}
+	);
+
+	if (read_subkey_list(base_nk_ptr->subkey_offset, hive_ptr, sub_keys) != hv_success)
+	{
+		return_status = hv_read_error;
+		goto fn_end;
+	}
 
 	uint32_t* hints = reg_path_ptr->nodes_hints;
-	if (sub_keys.signature == LH_SIGN)
+	if (sub_keys->signature == LH_SIGN)
 		hints = reg_path_ptr->nodes_hash;
 
 	// Searching for offset of embedded key
 	uint32_t embedded_nk_offset = 0;
-	for (size_t lf_index = 0; lf_index < sub_keys.elements_amount; lf_index++)
+	for (size_t lf_index = 0; lf_index < sub_keys->elements_amount; lf_index++)
 	{
-		if (sub_keys.elements[lf_index].name_hint != hints[0])
+		if (sub_keys->elements[lf_index].name_hint != hints[0])
 			continue;
 
-		embedded_nk_offset = sub_keys.elements[lf_index].node_offset;
+		embedded_nk_offset = sub_keys->elements[lf_index].node_offset;
 			
 		// Deallocating name of temp NK
 		if (out_nk_ptr->name != NULL)
@@ -302,22 +334,23 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 			int result = read_named_key(embedded_nk_offset, hive_ptr, out_nk_ptr);
 			if (result != hv_success)
 			{
-				free(sub_keys.elements);
-				return result;
+				free(sub_keys->elements);
+				return_status = result;
+				goto fn_end;
 			}
 		}
 
 		// Checking names if hints are identical
-		if (strcmp(out_nk_ptr->name, reg_path_ptr->nodes[0]) == 0 || sub_keys.signature == LH_SIGN)
+		if (strcmp(out_nk_ptr->name, reg_path_ptr->nodes[0]) == 0 || sub_keys->signature == LH_SIGN)
 			break;
 	}
 
 	// Checking if embedded key exists in base key
 	if (embedded_nk_offset == 0)
 	{
-		free(sub_keys.elements);
 		errno = ENOENT;
-		return hv_no_entity;
+		return_status = hv_no_entity;
+		goto fn_end;
 	}
 
 	// Delete first node of path
@@ -333,12 +366,14 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 		int result = reg_enum_subkey(out_nk_ptr, &next_key_path, hive_ptr, out_nk_ptr);
 		if (result != hv_success)
 		{
-			free(sub_keys.elements);
+			reg_destroy_lf(sub_keys);
+			// free(sub_keys->elements);
 			return result;
 		}
 	}
 
-	free(sub_keys.elements);
+fn_end:
+	reg_destroy_lf(sub_keys);
 	return hv_success;
 }
 
