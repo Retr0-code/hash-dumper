@@ -43,44 +43,56 @@ int dump_users_keys(FILE* sam_hive, named_key_t** users_keys_array, size_t* user
     // Validating parameters
     validate_parameters(sam_hive == NULL || users_amount == NULL || users_amount == 0, -1);
 
+    int return_status = 0;
+
     // Allocating hive header
     hive_header_t* hive_header_ptr = malloc_check(hive_header_ptr, sizeof(hive_header_t), -2);
     // Allocating base named key
-    named_key_t* base_nk_ptr = malloc_check(base_nk_ptr, sizeof(named_key_t), -3);
+    named_key_t* base_nk_ptr = malloc_check_lambda(
+        base_nk_ptr,
+        sizeof(named_key_t),
+        {
+            return_status = -3;
+            goto fn_end;
+        }
+    );
+
     if (hive_get_root(sam_hive, hive_header_ptr, base_nk_ptr) != hv_success)
     {
-        cleanup_pointers(2, hive_header_ptr, base_nk_ptr);
-        return -4;
+        return_status = -4;
+        goto fn_end;
     }
 
     // Initializing path to users cells
     reg_path_t* reg_users_path = reg_make_path(4, "SAM", "Domains", "Account", "Users");
     if (reg_users_path == NULL)
     {
-        cleanup_pointers(2, hive_header_ptr, base_nk_ptr);
-        return -5;
+        return_status = -5;
+        goto fn_end;
     }
 
     // Allocating users named key
-    named_key_t* users_nk_ptr = malloc_check_clean(
-        base_nk_ptr,
+    named_key_t* users_nk_ptr = malloc_check_lambda(
+        users_nk_ptr,
         sizeof(named_key_t),
-        -6, 2,
-        hive_header_ptr, base_nk_ptr
+        {
+            return_status = -6;
+            goto fn_end;
+        }
     );
 
     // Enumerating named key by specified path
     if (reg_enum_subkey(base_nk_ptr, reg_users_path, sam_hive, users_nk_ptr) != 0)
     {
-        cleanup_pointers(4, hive_header_ptr, base_nk_ptr, users_nk_ptr, reg_users_path);
-        return -7;
+        return_status = -7;
+        goto fn_end;
     }
 
     fast_leaf_t subkey_list;
     if (read_subkey_list(users_nk_ptr->subkey_offset, sam_hive, &subkey_list) != hv_success)
     {
-        cleanup_pointers(4, hive_header_ptr, base_nk_ptr, users_nk_ptr, reg_users_path);
-        return -8;
+        return_status = -8;
+        goto fn_end;
     }
 
     // Hint for fast leaf
@@ -89,11 +101,13 @@ int dump_users_keys(FILE* sam_hive, named_key_t** users_keys_array, size_t* user
         hints = reg_users_path->nodes_hash;
 
     // Allocating an array of named keys with NULLs
-    *users_keys_array = malloc_check_clean(
+    *users_keys_array = malloc_check_lambda(
         users_keys_array,
         subkey_list.elements_amount * sizeof(named_key_t),
-        -9, 5,
-        hive_header_ptr, base_nk_ptr, users_nk_ptr, reg_users_path, hints
+        {
+            return_status = -9;
+            goto fn_end;
+        }
     );
     memset(*users_keys_array, 0, subkey_list.elements_amount * sizeof(named_key_t));
     *users_amount = 0;
@@ -104,14 +118,8 @@ int dump_users_keys(FILE* sam_hive, named_key_t** users_keys_array, size_t* user
         // Read the named key
         if (read_named_key(subkey_list.elements[lf_index].node_offset, sam_hive, &(*users_keys_array)[*users_amount]) != hv_success)
         {
-            cleanup_pointers(
-                6,
-                hive_header_ptr, base_nk_ptr,
-                users_nk_ptr, reg_users_path,
-                hints, *users_keys_array
-            );
-
-            return -11;
+            return_status = -10;
+            goto fn_end;
         }
 
         // Exclude Names from list of named keys
@@ -121,13 +129,12 @@ int dump_users_keys(FILE* sam_hive, named_key_t** users_keys_array, size_t* user
         (*users_amount)++;
     }
 
-    cleanup_pointers(
-        5,
-        hive_header_ptr, base_nk_ptr,
-        users_nk_ptr, reg_users_path,
-        hints
-    );
-    return 0;
+fn_end:
+    free(hive_header_ptr);
+    reg_destroy_nk(base_nk_ptr);
+    reg_destroy_nk(users_nk_ptr);
+    reg_destroy_path(reg_users_path);
+    return return_status;
 }
 
 int dump_v_value(FILE* sam_hive, named_key_t* user_key_ptr, ntlm_user_t* user_info_ptr)
@@ -299,6 +306,7 @@ int decrypt_ntlm_hash_wrapper(
         }
     }
 
+    free(staged_hash);
     return 0;
 }
 
@@ -334,6 +342,7 @@ int decrypt_ntlmv1_callback(
         return -5;
     }
 
+    cleanup_pointers(2, full_data, md5_hash);
     return 0;
 }
 
