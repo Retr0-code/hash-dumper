@@ -324,7 +324,7 @@ int reg_enum_value(const named_key_t* base_nk_ptr, const char* value_name, FILE*
  *	\param[in] hive_ptr		pointer to hive file descriptior.
  *	\return	NULL on error or void pointer to read value.
  */
-void* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr);
+uint8_t* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr);
 
 /*! \fn char16_t* reg_get_class(named_key_t* nk_ptr, FILE* hive_ptr)
  *	\brief Reads UTF-16 class name of specified named/node key

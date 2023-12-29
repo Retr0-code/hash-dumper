@@ -365,16 +365,12 @@ int reg_enum_subkey(const named_key_t* base_nk_ptr, const reg_path_t* reg_path_p
 	{
 		int result = reg_enum_subkey(out_nk_ptr, &next_key_path, hive_ptr, out_nk_ptr);
 		if (result != hv_success)
-		{
-			reg_destroy_lf(sub_keys);
-			// free(sub_keys->elements);
-			return result;
-		}
+			return_status = result;
 	}
 
 fn_end:
 	reg_destroy_lf(sub_keys);
-	return hv_success;
+	return return_status;
 }
 
 int reg_enum_value(const named_key_t* base_nk_ptr, const char* value_name, FILE* hive_ptr, value_key_t* out_vk_ptr)
@@ -414,13 +410,13 @@ int reg_enum_value(const named_key_t* base_nk_ptr, const char* value_name, FILE*
 	return hv_no_entity;
 }
 
-void* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr)
+uint8_t* reg_get_value(const value_key_t* vk_ptr, FILE* hive_ptr)
 {
 	// Validating parameters
 	validate_parameters(vk_ptr == NULL || hive_ptr == NULL, NULL);
 
 	// Allocating space for a value
-	void* value = malloc_check(value, vk_ptr->data_size, NULL);
+	uint8_t* value = malloc_check(value, vk_ptr->data_size, NULL);
 
 	// Moving cursor to value position
 	if (hive_file_seek(hive_ptr, vk_ptr->data_offset_val + 4) != 0)
